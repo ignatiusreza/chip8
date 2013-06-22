@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual C++ Express 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "chip8", "chip8.vcproj", "{D309E409-261B-492E-B7DD-14335AA7191A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "chip8_test", "test\chip8_test.vcproj", "{288BE452-4C9B-4DCC-8255-AA7193FB9D2C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D309E409-261B-492E-B7DD-14335AA7191A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D309E409-261B-492E-B7DD-14335AA7191A}.Debug|Win32.Build.0 = Debug|Win32
+		{D309E409-261B-492E-B7DD-14335AA7191A}.Release|Win32.ActiveCfg = Release|Win32
+		{D309E409-261B-492E-B7DD-14335AA7191A}.Release|Win32.Build.0 = Release|Win32
+		{288BE452-4C9B-4DCC-8255-AA7193FB9D2C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{288BE452-4C9B-4DCC-8255-AA7193FB9D2C}.Debug|Win32.Build.0 = Debug|Win32
+		{288BE452-4C9B-4DCC-8255-AA7193FB9D2C}.Release|Win32.ActiveCfg = Release|Win32
+		{288BE452-4C9B-4DCC-8255-AA7193FB9D2C}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
