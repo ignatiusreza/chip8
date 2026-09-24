@@ -28,7 +28,5 @@ and the tests with
 Differences from the C++ version
 --------------------------------
 
-Both versions share the same opcode fixes (see the [top-level README](../README.md)).
-
 The window is scaled 8x (512x256) rather than 10x, since minifb only supports
 power-of-two scales. If no audio device is available the emulator runs without sound.
