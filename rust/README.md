@@ -2,7 +2,8 @@ chip8 (Rust)
 ============
 
 A Rust port of the C++ emulator in [`../cpp`](../cpp), keeping the same structure
-(CPU, display, keypad, stack) and timing (3 opcodes per ~16ms tick).
+(CPU, display, keypad) and timing (3 opcodes per ~16ms tick). The call stack is a
+plain `Vec`, capped at 16 entries.
 
 The emulator core (`src/lib.rs`) has no windowing or audio dependency, so it can be
 unit tested on its own; `src/main.rs` is the frontend, using pure-Rust crates:
