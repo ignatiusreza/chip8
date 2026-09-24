@@ -1,0 +1,9 @@
+[package]
+name = "chip8"
+version = "0.1.0"
+edition = "2021"
+description = "A CHIP-8 emulator, ported from the C++ implementation in ../cpp"
+
+[dependencies]
+minifb = "0.28"
+rodio = { version = "0.22", default-features = false, features = ["playback"] }

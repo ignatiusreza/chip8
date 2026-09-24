@@ -18,7 +18,10 @@ int main(int argc, char *argv[]) {
 
   SDL_WM_SetCaption((static_cast<std::string>("Chip 8 : ") +  argv[1]).c_str(),NULL);
   CPU cpu;
-  cpu.load(argv[1]);
+  if(!cpu.load(argv[1])) {
+    SDL_Quit();
+    return 1;
+  }
 
   while(cpu.loop()) {
     SDL_Delay(16);
