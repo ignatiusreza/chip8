@@ -1,29 +1,34 @@
 #ifndef _CHIP8_SOUND_H
 #define	_CHIP8_SOUND_H
 
-#include <cmath>
 #include "SDL.h"
 
 void callback(void *_sound, Uint8 *_stream, int _length);
 
+// Square-wave beeper that plays while the sound timer is active.
 class Sound {
   public:
     static const int FREQUENCY = 44100;
+    static const int BEEP_HZ = 440;
+    static const Sint16 AMPLITUDE = 5000;
 
   private:
-    int _durationLeft;
+    bool _playing;
+    int _phase;
 
   public:
     Sound() {
       SDL_AudioSpec desiredSpec;
       SDL_AudioSpec obtainedSpec;
 
-      _durationLeft = 0;
+      _playing = false;
+      _phase = 0;
 
       desiredSpec.freq = FREQUENCY;
       desiredSpec.format = AUDIO_S16SYS;
       desiredSpec.channels = 1;
-      desiredSpec.samples = 2048;
+      // small buffer so the beep starts and stops close to the timer
+      desiredSpec.samples = 512;
       desiredSpec.callback = callback;
       desiredSpec.userdata = this;
 
@@ -37,8 +42,10 @@ class Sound {
       SDL_CloseAudio();
     }
 
-    void beep(int duration) {
-      _durationLeft = duration * FREQUENCY / 1000;
+    void setPlaying(bool playing) {
+      SDL_LockAudio();
+      _playing = playing;
+      SDL_UnlockAudio();
     }
 
     friend void callback(void *_sound, Uint8 *_stream, int _length);
@@ -48,13 +55,16 @@ void callback(void *_sound, Uint8 *_stream, int _length) {
   Sound  *sound  = static_cast<Sound *>(_sound);
   Sint16 *stream = reinterpret_cast<Sint16*>(_stream);
   int length = _length / 2;
-  int sampleLength = std::min(length,sound->_durationLeft);
-  int i = 0;
+  int halfPeriod = Sound::FREQUENCY / Sound::BEEP_HZ / 2;
 
-  sound->_durationLeft -= sampleLength;
-
-  for(;i < sampleLength; i++) stream[i] = 20000;
-  for(;i < length      ; i++) stream[i] = 0;
+  for(int i = 0; i < length; i++) {
+    if(sound->_playing) {
+      stream[i] = (sound->_phase / halfPeriod) % 2 ? -Sound::AMPLITUDE : Sound::AMPLITUDE;
+      sound->_phase = (sound->_phase + 1) % (halfPeriod * 2);
+    } else {
+      stream[i] = 0;
+    }
+  }
 }
 
 #endif	/* _CHIP8_SOUND_H */

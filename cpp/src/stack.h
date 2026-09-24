@@ -31,13 +31,13 @@ class Stack {
     }
 
     short pop() {
-      if(underflow()) return NULL;
+      if(underflow()) return 0;
 
       return *(--_tos);
     }
 
     short peek() {
-      if(underflow()) return NULL;
+      if(underflow()) return 0;
       return *(_tos-1);
     }
 

@@ -1,15 +1,21 @@
 #ifndef _CHIP8_CPU_H
 #define	_CHIP8_CPU_H
 
-#include <fstream>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iostream>
 #include "stack.h"
 #include "graphic.h"
 #include "sound.h"
 #include "input.h"
 #include "SDL.h"
 
+#define MEMORY_SIZE 0x1000
+#define PROGRAM_START 0x200
 #define FONT_BYTE_LENGTH 5
+#define MEM(addr) _memory[(addr) & (MEMORY_SIZE - 1)]
 #define VX  V[((opcode & 0x0F00) >> 8)]
 #define VY  V[((opcode & 0x00F0) >> 4)]
 #define NNN (opcode & 0x0FFF)
@@ -17,10 +23,11 @@
 #define N   (opcode & 0x000F)
 
 class CPU {
-  unsigned char V[16], data, DT, ST;
-  unsigned char _memory[0xfff], X, Y, _keyBuff;
-  short PC;
-  short opcode, I, temp;
+  unsigned char V[16], data, DT, ST, flag;
+  unsigned char _memory[MEMORY_SIZE], X, Y, _keyBuff;
+  unsigned short PC;
+  unsigned short opcode, I;
+  int temp;
   bool _waitForKey, _continue;
 
   Stack   _stack;
@@ -32,6 +39,7 @@ class CPU {
     X = (opcode & 0x0F00) >> 8;
     Y = (opcode & 0x00F0) >> 4;
 
+    // VF is written after the result, so the flag wins when X is F
     switch(opcode & 0x000F) {
       case 0x0000: // 8XY0 (VX = VY)
         V[X] = V[Y];
@@ -47,24 +55,28 @@ class CPU {
         break;
       case 0x0004: // 8XY4 VX += VY, with VF = carry
         temp = V[X] + V[Y];
-        V[0xF] = (temp > 0xFF) ? 1 : 0;
         V[X] = (unsigned char)temp;
+        V[0xF] = (temp > 0xFF) ? 1 : 0;
         break;
       case 0x0005: // 8XY5 VX -= VY, with VF = NOT borrow
-        V[0xF] = (V[X] > V[Y]) ? 1 : 0;
+        flag = (V[X] >= V[Y]) ? 1 : 0;
         V[X] = V[X] - V[Y];
+        V[0xF] = flag;
         break;
       case 0x0006: // 8XY6 VX >> 1, VF = LSB
-        V[0xF] = V[X] & 0x1;
+        flag = V[X] & 0x1;
         V[X] >>= 1;
+        V[0xF] = flag;
         break;
       case 0x0007: // 8XY7 VX = VY - VX, with VF = NOT borrow
-        V[0xF] = (V[Y] > V[X]) ? 1 : 0;
+        flag = (V[Y] >= V[X]) ? 1 : 0;
         V[X] = V[Y] - V[X];
+        V[0xF] = flag;
         break;
       case 0x000E: // 8XYE VX << 1, VF = MSB
-        V[0xF] = V[X] & 0x80;
+        flag = V[X] >> 7;
         V[X] <<= 1;
+        V[0xF] = flag;
         break;
     }
   }
@@ -90,18 +102,18 @@ class CPU {
         I += V[X];
         break;
       case 0x0029: // FX29 ( I = location of font for value of V[X] )
-        I = V[X] * FONT_BYTE_LENGTH;
+        I = (V[X] & 0xF) * FONT_BYTE_LENGTH;
         break;
       case 0x0033: // FX33 ( I[0..2] = BCD(VX) )
-        _memory[I] = V[X] / 100;
-        _memory[I+1] = (V[X] / 10) % 10;
-        _memory[I+2] = V[X] % 10;
+        MEM(I) = V[X] / 100;
+        MEM(I+1) = (V[X] / 10) % 10;
+        MEM(I+2) = V[X] % 10;
         break;
       case 0x0055: // FX55 ( I[0..X] = V0..VX )
-        for(int i = 0;i <= X;i++) _memory[I + i] = V[i];
+        for(int i = 0;i <= X;i++) MEM(I + i) = V[i];
         break;
       case 0x0065: // FX65 ( V0..VX = I[0..X] )
-        for(int i = 0;i <= X;i++) V[i] = _memory[I + i];
+        for(int i = 0;i <= X;i++) V[i] = MEM(I + i);
         break;
     }
   }
@@ -110,14 +122,15 @@ class CPU {
     // we're waiting for a keypress, don't advance..
     if(_waitForKey) return;
 
-    opcode = (_memory[PC] << 8) + _memory[PC+1];
+    opcode = (MEM(PC) << 8) | MEM(PC+1);
     switch(opcode & 0xF000) {
       case 0x0000:
-        X = NN;
-        if(X == 0x00EE) { // return from a subroutine
+        if(opcode == 0x00EE) { // return from a subroutine
           PC = _stack.pop();
-        }else if(X == 0x00E0) { // clear screen
+        }else if(opcode == 0x00E0) { // clear screen
           _graphic.clearScreen();
+          PC += 2;
+        }else { // 0NNN (machine code routine) is unsupported, skip it
           PC += 2;
         }
         break;
@@ -183,7 +196,7 @@ class CPU {
 
         V[0xF] = 0; // Reset collision flag
         for (int yline = 0; yline < N; yline++){
-          data = _memory[I + yline]; //this retreives the byte for a given line of pixels
+          data = MEM(I + yline); //this retreives the byte for a given line of pixels
           for(int xpix = 0; xpix < 8; xpix++){
             if ((data & (0x80 >> xpix)) != 0){
               if (_graphic.get(V[X] + xpix, V[Y] + yline)) V[0xF] = 1; //there has been a collision
@@ -209,11 +222,14 @@ class CPU {
         PC += 2;
         break;
     }
+
+    // addresses wrap around the 4KB memory
+    PC &= MEMORY_SIZE - 1;
   }
 
   void setKey(SDLKey key, bool pressed) {
     bool validKey = true;
-    char keyPressed;
+    unsigned char keyPressed = 0;
     switch( key ){
       case SDLK_1: keyPressed = 0x0; break;
       case SDLK_q: keyPressed = 0x1; break;
@@ -231,13 +247,14 @@ class CPU {
       case SDLK_t: keyPressed = 0xD; break;
       case SDLK_g: keyPressed = 0xE; break;
       case SDLK_b: keyPressed = 0xF; break;
-      case SDLK_ESCAPE: _continue = false;
+      case SDLK_ESCAPE: _continue = false; // fall through
       default: validKey = false;
     }
 
     if(validKey) {
       _input.set(keyPressed, pressed);
-      if(_waitForKey) {
+      // only a keypress (not a release) resumes FX0A
+      if(_waitForKey && pressed) {
         V[_keyBuff] = keyPressed;
         _waitForKey = false;
       }
@@ -247,7 +264,7 @@ class CPU {
   public:
     CPU() {
       // store font data at 0x000 - 0x050
-      char font[] = {
+      unsigned char font[] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
         0x20, 0x60, 0x20, 0x20, 0x70, // 1
         0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
@@ -265,39 +282,48 @@ class CPU {
         0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
         0xF0, 0x80, 0xF0, 0x80, 0x80  // F
       };
-      memcpy(_memory, font, 80);
+      memset(_memory, 0, sizeof(_memory));
+      memcpy(_memory, font, sizeof(font));
       memset(V, 0, sizeof(V));
       _continue   = true;
       _waitForKey = false;
 
+      PC = PROGRAM_START;
+      I  = 0;
       DT = 0;
       ST = 0;
+
+      srand(time(NULL));
     }
 
-    void load(char *filename) {
-      int cnt = 0x200;
+    bool load(char *filename) {
       std::ifstream rom(filename, std::ios_base::binary | std::ios_base::in);
+      if(!rom) {
+        std::cout << "Could not read " << filename << std::endl;
+        return false;
+      }
 
-      while(!rom.eof()) {
-        rom.read((char *) &_memory[cnt], 0xFFF);
-        cnt += rom.gcount();
-        if(!rom.eof() && !rom.good()) {
-          //std::cout << "Error Reading ROM" << std::endl;
-          exit(0);
-        }
+      const int maxSize = MEMORY_SIZE - PROGRAM_START;
+      rom.read((char *) &_memory[PROGRAM_START], maxSize);
+      if(rom.bad()) {
+        std::cout << "Error Reading ROM" << std::endl;
+        return false;
+      }
+      if(rom.gcount() == maxSize && rom.peek() != EOF) {
+        std::cout << "ROM is too large, at most " << maxSize << " bytes fit in memory" << std::endl;
+        return false;
       }
 
       rom.close();
-      PC = 0x200;
+      PC = PROGRAM_START;
+      return true;
     }
 
     void tick() {
       if(DT > 0) DT--;
-      if(ST > 0) {
-        // play audio
-        _sound.beep(15);
-        ST--;
-      }
+      // play audio for as long as the sound timer runs
+      _sound.setPlaying(ST > 0);
+      if(ST > 0) ST--;
 
       // run 3 opcode per tick
       for(int i = 0;i < 3;i++) {

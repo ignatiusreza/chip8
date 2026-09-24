@@ -25,20 +25,19 @@ class Graphic {
       _black = SDL_MapRGB(_screen->format, 0x00, 0x00, 0x00);
       _white = SDL_MapRGB(_screen->format, 0xff, 0xff, 0xff);
       _rect.h = _rect.w = 10;
+      _is_invalidated = true;
     }
     void clearScreen() { _buff.reset(); _is_invalidated = true; }
-    bool get (int x,int y) { 
-      try {
-        return _buff.test(x + (y*WIDTH));
-      } catch(...) {
-        return false;
-      }
+    // off-screen pixels read as unset, instead of wrapping to the next row
+    bool get (int x,int y) {
+      if(!onScreen(x, y)) return false;
+      return _buff.test(x + (y*WIDTH));
     }
-    void flip(int x,int y) { 
-      try {
-        _buff.flip(x + (y*WIDTH));
-        _is_invalidated = true;
-      } catch(...) { }
+    // off-screen pixels are ignored
+    void flip(int x,int y) {
+      if(!onScreen(x, y)) return;
+      _buff.flip(x + (y*WIDTH));
+      _is_invalidated = true;
     }
 
     void invalidate() { _is_invalidated = true; }
@@ -62,6 +61,9 @@ class Graphic {
 
       _is_invalidated = false;
     }
+
+  private:
+    bool onScreen(int x, int y) { return x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT; }
 };
 
 #endif	/* _CHIP8_GRAPHIC_H */

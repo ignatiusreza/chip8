@@ -35,6 +35,10 @@ only included basic test for the stack.
 It is a really good test framework though, so in case you need a test framework for your C++ codes,
 give it a try.
 
+The copy under ./test is for VisualStudio; under linux the Makefile uses the system googletest
+
+    e.g (on ubuntu) : sudo apt-get install libgtest-dev
+
 after compilation, to run the test use :
 
-    LD_LIBRARY_PATH=./test/lib ./chip8_test
+    ./chip8_test

@@ -28,13 +28,7 @@ and the tests with
 Differences from the C++ version
 --------------------------------
 
-A few opcode bugs were fixed during the port:
-
-- `8XYE` sets VF to the shifted-out bit (0 or 1), not `0x80`
-- `8XY5` / `8XY7` set VF when there is no borrow, including equal operands
-- `0NNN` is skipped instead of stalling the program counter
-- memory is the full 4KB (`0x1000` bytes), and addresses wrap instead of overflowing
-- the beeper plays an audible 440Hz square wave, for as long as the sound timer runs
+Both versions share the same opcode fixes (see the [top-level README](../README.md)).
 
 The window is scaled 8x (512x256) rather than 10x, since minifb only supports
 power-of-two scales. If no audio device is available the emulator runs without sound.

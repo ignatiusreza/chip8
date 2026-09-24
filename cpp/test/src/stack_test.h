@@ -18,7 +18,7 @@ class StackTest : public ::testing::Test {
 
 // Tests that popping stack will not underflow.
 TEST_F(StackTest, UnderflowTest) {
-  EXPECT_EQ(NULL, s1.pop());
+  EXPECT_EQ(0, s1.pop());
 }
 
 // Tests that pushing stack pass the CAPACITY will not overflow.
@@ -40,7 +40,7 @@ TEST_F(StackTest, PushPopTest) {
 
   for(i--; i >= 0; i--)
     ASSERT_EQ(i, s1.pop());
-  ASSERT_EQ(NULL, s1.pop()); // underflow??
+  ASSERT_EQ(0, s1.pop()); // underflow??
 }
 
 // Tests that stack can store large enough value.
