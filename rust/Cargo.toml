@@ -5,4 +5,5 @@ edition = "2021"
 description = "A CHIP-8 emulator, ported from the C++ implementation in ../cpp"
 
 [dependencies]
-sdl2 = "0.38"
+minifb = "0.28"
+rodio = { version = "0.22", default-features = false, features = ["playback"] }

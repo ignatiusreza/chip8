@@ -1,70 +1,63 @@
-use std::time::Duration;
+use std::num::NonZero;
 
 use chip8::{Cpu, Display};
-use sdl2::audio::{AudioCallback, AudioSpecDesired};
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
+use minifb::{Key, Scale, Window, WindowOptions};
+use rodio::source::{Function, SignalGenerator, Source};
+use rodio::{DeviceSinkBuilder, Player};
 
-const SCALE: u32 = 10;
-const FREQUENCY: i32 = 44100;
-const BEEP_MS: i32 = 15;
+const FPS: usize = 60;
 const OPCODES_PER_TICK: usize = 3;
+const BEEP_HZ: f32 = 440.0;
+const BLACK: u32 = 0x000000;
+const WHITE: u32 = 0xFFFFFF;
 
-/// Square-wave beeper; `beep` queues a tone for the given number of ms.
+// CHIP-8 keypad value for each index, mapped onto the left side of a QWERTY keyboard
+const KEYMAP: [Key; 16] = [
+    Key::Key1, // 0
+    Key::Q,    // 1
+    Key::W,    // 2
+    Key::E,    // 3
+    Key::A,    // 4
+    Key::S,    // 5
+    Key::D,    // 6
+    Key::Z,    // 7
+    Key::X,    // 8
+    Key::C,    // 9
+    Key::R,    // A
+    Key::F,    // B
+    Key::V,    // C
+    Key::T,    // D
+    Key::G,    // E
+    Key::B,    // F
+];
+
+/// Square-wave beeper that plays while the sound timer is active.
 struct Beeper {
-    samples_left: i32,
-    phase: f32,
-    phase_inc: f32,
+    // the device sink must stay alive for the player to keep producing sound
+    _sink: rodio::MixerDeviceSink,
+    player: Player,
 }
 
 impl Beeper {
-    fn beep(&mut self, ms: i32) {
-        self.samples_left = ms * FREQUENCY / 1000;
+    fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let sink = DeviceSinkBuilder::open_default_sink()?;
+        let player = Player::connect_new(sink.mixer());
+        let sample_rate = NonZero::new(44100).unwrap();
+        player.append(SignalGenerator::new(sample_rate, BEEP_HZ, Function::Square).amplify(0.1));
+        player.pause();
+        Ok(Beeper {
+            _sink: sink,
+            player,
+        })
     }
-}
 
-impl AudioCallback for Beeper {
-    type Channel = i16;
-
-    fn callback(&mut self, out: &mut [i16]) {
-        for sample in out.iter_mut() {
-            *sample = if self.samples_left > 0 {
-                self.samples_left -= 1;
-                self.phase = (self.phase + self.phase_inc) % 1.0;
-                if self.phase < 0.5 {
-                    5000
-                } else {
-                    -5000
-                }
-            } else {
-                0
-            };
+    fn set_playing(&self, playing: bool) {
+        if playing {
+            self.player.play();
+        } else {
+            self.player.pause();
         }
     }
-}
-
-fn map_key(key: Keycode) -> Option<u8> {
-    Some(match key {
-        Keycode::Num1 => 0x0,
-        Keycode::Q => 0x1,
-        Keycode::W => 0x2,
-        Keycode::E => 0x3,
-        Keycode::A => 0x4,
-        Keycode::S => 0x5,
-        Keycode::D => 0x6,
-        Keycode::Z => 0x7,
-        Keycode::X => 0x8,
-        Keycode::C => 0x9,
-        Keycode::R => 0xA,
-        Keycode::F => 0xB,
-        Keycode::V => 0xC,
-        Keycode::T => 0xD,
-        Keycode::G => 0xE,
-        Keycode::B => 0xF,
-        _ => return None,
-    })
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -78,89 +71,55 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut cpu = Cpu::new();
     cpu.load(&rom)?;
 
-    let sdl = sdl2::init()?;
-    let window = sdl
-        .video()?
-        .window(
-            &format!("Chip 8 : {}", args[1]),
-            Display::WIDTH as u32 * SCALE,
-            Display::HEIGHT as u32 * SCALE,
-        )
-        .position_centered()
-        .build()?;
-    let mut canvas = window.into_canvas().build()?;
-    let mut events = sdl.event_pump()?;
-
-    let mut audio = sdl.audio()?.open_playback(
-        None,
-        &AudioSpecDesired {
-            freq: Some(FREQUENCY),
-            channels: Some(1),
-            samples: Some(2048),
-        },
-        |spec| Beeper {
-            samples_left: 0,
-            phase: 0.0,
-            phase_inc: 440.0 / spec.freq as f32,
+    let mut window = Window::new(
+        &format!("Chip 8 : {}", args[1]),
+        Display::WIDTH,
+        Display::HEIGHT,
+        WindowOptions {
+            scale: Scale::X8,
+            ..WindowOptions::default()
         },
     )?;
-    audio.resume();
+    window.set_target_fps(FPS);
 
-    'running: loop {
-        std::thread::sleep(Duration::from_millis(16));
+    // keep running without sound when no audio device is available
+    let beeper = Beeper::new()
+        .inspect_err(|e| eprintln!("Sound disabled, could not open audio device: {e}"))
+        .ok();
 
-        if cpu.tick_timers() {
-            audio.lock().beep(BEEP_MS);
+    let mut buffer = vec![BLACK; Display::BUFF_LENGTH];
+    let mut keys = [false; 16];
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        let beeping = cpu.tick_timers();
+        if let Some(beeper) = &beeper {
+            beeper.set_playing(beeping);
+        }
+
+        // only report changes, so FX0A waits for a fresh keypress
+        for (k, key) in KEYMAP.iter().enumerate() {
+            let down = window.is_key_down(*key);
+            if down != keys[k] {
+                keys[k] = down;
+                cpu.set_key(k as u8, down);
+            }
         }
 
         for _ in 0..OPCODES_PER_TICK {
-            for event in events.poll_iter() {
-                match event {
-                    Event::Quit { .. }
-                    | Event::KeyDown {
-                        keycode: Some(Keycode::Escape),
-                        ..
-                    } => break 'running,
-                    Event::KeyDown {
-                        keycode: Some(key), ..
-                    } => {
-                        if let Some(k) = map_key(key) {
-                            cpu.set_key(k, true);
-                        }
-                    }
-                    Event::KeyUp {
-                        keycode: Some(key), ..
-                    } => {
-                        if let Some(k) = map_key(key) {
-                            cpu.set_key(k, false);
-                        }
-                    }
-                    _ => {}
-                }
-            }
             cpu.step();
         }
 
-        // update screen if invalidated
+        // redraw only if invalidated, but always update so input keeps being polled
         if cpu.display_mut().take_invalidated() {
-            canvas.set_draw_color(Color::BLACK);
-            canvas.clear();
-            canvas.set_draw_color(Color::WHITE);
             let display = cpu.display();
             for y in 0..Display::HEIGHT {
                 for x in 0..Display::WIDTH {
-                    if display.get(x, y) {
-                        let rect = Rect::new(
-                            (x as u32 * SCALE) as i32,
-                            (y as u32 * SCALE) as i32,
-                            SCALE,
-                            SCALE,
-                        );
-                        canvas.fill_rect(rect)?;
-                    }
+                    buffer[x + y * Display::WIDTH] = if display.get(x, y) { WHITE } else { BLACK };
                 }
             }
-            canvas.present();
+            window.update_with_buffer(&buffer, Display::WIDTH, Display::HEIGHT)?;
+        } else {
+            window.update();
         }
     }
 

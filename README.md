@@ -4,7 +4,7 @@ chip8
 A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) emulator, implemented in more than one language.
 
 - [`cpp/`](cpp/) - the original C++ implementation (SDL 1.2, googletest)
-- [`rust/`](rust/) - a port of the same emulator to Rust (SDL2)
+- [`rust/`](rust/) - a port of the same emulator to Rust (minifb, rodio)
 
 References for the bytecodes used is from :
 
