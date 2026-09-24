@@ -6,9 +6,11 @@ A Rust port of the C++ emulator in [`../cpp`](../cpp), keeping the same structur
 plain `Vec`, capped at 16 entries.
 
 The emulator core (`src/lib.rs`) has no windowing or audio dependency, so it can be
-unit tested on its own; `src/main.rs` is the frontend, using pure-Rust crates:
+unit tested on its own. `src/frontend/` wires it to the outside world, like the C++
+`Graphic`, `Input` and `Sound` classes, using pure-Rust crates:
 [minifb](https://crates.io/crates/minifb) for the window and keyboard, and
-[rodio](https://crates.io/crates/rodio) for the beeper.
+[rodio](https://crates.io/crates/rodio) for the beeper. `src/main.rs` just loads the
+ROM and runs the `Emulator` loop.
 
 Building
 --------
