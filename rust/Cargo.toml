@@ -1,0 +1,8 @@
+[package]
+name = "chip8"
+version = "0.1.0"
+edition = "2021"
+description = "A CHIP-8 emulator, ported from the C++ implementation in ../cpp"
+
+[dependencies]
+sdl2 = "0.38"
