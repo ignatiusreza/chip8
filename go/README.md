@@ -6,8 +6,10 @@ same structure (CPU, display, keypad) and timing (3 opcodes per 1/60s tick). The
 stack is a plain slice, capped at 16 entries.
 
 The emulator core (package [`chip8`](chip8)) has no windowing or audio dependency, so it
-can be unit tested on its own; `main.go` is the frontend, using
-[Ebitengine](https://ebitengine.org) for the window, keyboard and beeper.
+can be unit tested on its own. Package [`frontend`](frontend) wires it to the outside
+world, like the C++ `Graphic`, `Input` and `Sound` classes, using
+[Ebitengine](https://ebitengine.org) for the window, keyboard and beeper. `main.go` just
+loads the ROM and runs the `Emulator`.
 
 Building
 --------
