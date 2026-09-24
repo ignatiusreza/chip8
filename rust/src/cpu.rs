@@ -1,7 +1,8 @@
-use crate::{Display, Keypad, Stack};
+use crate::{Display, Keypad};
 
 pub const MEMORY_SIZE: usize = 0x1000;
 pub const PROGRAM_START: u16 = 0x200;
+pub const STACK_DEPTH: usize = 16;
 const FONT_BYTE_LENGTH: u16 = 5;
 
 // store font data at 0x000 - 0x050
@@ -47,7 +48,8 @@ pub struct Cpu {
     dt: u8,
     st: u8,
     memory: [u8; MEMORY_SIZE],
-    stack: Stack,
+    /// Return addresses, holding at most `STACK_DEPTH` entries.
+    stack: Vec<u16>,
     display: Display,
     keypad: Keypad,
     /// Register waiting for a keypress (FX0A); execution halts until it's set.
@@ -74,7 +76,7 @@ impl Cpu {
             dt: 0,
             st: 0,
             memory,
-            stack: Stack::new(),
+            stack: Vec::with_capacity(STACK_DEPTH),
             display: Display::new(),
             keypad: Keypad::default(),
             wait_for_key: None,
@@ -149,8 +151,10 @@ impl Cpu {
             },
             0x1000 => self.pc = nnn, // 1NNN (jump to NNN)
             0x2000 => {
-                // 2NNN (call subroutine at NNN)
-                self.stack.push(self.pc);
+                // 2NNN (call subroutine at NNN), the return address is dropped once the stack is full
+                if self.stack.len() < STACK_DEPTH {
+                    self.stack.push(self.pc);
+                }
                 self.pc = nnn;
             }
             0x3000 => self.skip_if(self.v[x] == nn), // 3XNN (skip next inst if VX == NN)
@@ -359,6 +363,24 @@ mod tests {
         assert_eq!(cpu.pc, 0x202);
         cpu.step();
         assert_eq!(cpu.v[0], 1);
+    }
+
+    #[test]
+    fn return_with_empty_stack_restarts_program() {
+        let cpu = run(&[0x6001, 0x00EE]);
+        assert_eq!(cpu.pc, PROGRAM_START);
+    }
+
+    #[test]
+    fn call_depth_is_capped() {
+        // 0x200: call 0x200, recursing forever
+        let mut cpu = Cpu::with_seed(1);
+        cpu.load(&[0x22, 0x00]).unwrap();
+        for _ in 0..=STACK_DEPTH {
+            cpu.step();
+        }
+        assert_eq!(cpu.stack.len(), STACK_DEPTH);
+        assert!(cpu.stack.iter().all(|&addr| addr == 0x202));
     }
 
     #[test]
