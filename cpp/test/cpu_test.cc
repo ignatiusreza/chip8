@@ -169,6 +169,31 @@ TEST(CPUTest, DrawClipsAtRightEdge) {
   EXPECT_FALSE(cpu.display().get(1, 1));
 }
 
+TEST(CPUTest, DrawWrapsStartPosition) {
+  // the top row of font "0" at (66, 33) starts at (2, 1)
+  CPU cpu = run({0x6042, 0x6121, 0xA000, 0xD011});
+  EXPECT_TRUE(cpu.display().get(2, 1));
+  EXPECT_TRUE(cpu.display().get(5, 1));
+  EXPECT_FALSE(cpu.display().get(6, 1));
+}
+
+TEST(CPUTest, DrawWithVFAsCoordinate) {
+  // VF = 10 is read as the X coordinate before it becomes the collision flag
+  CPU cpu = run({0x6F0A, 0x6100, 0xA000, 0xDF11});
+  EXPECT_TRUE(cpu.display().get(10, 0));
+  EXPECT_FALSE(cpu.display().get(0, 0));
+  EXPECT_EQ(cpu.v(0xF), 0);
+
+  // with a pixel already lit at (10, 0), the collision is found and the rest of the
+  // row is still drawn at x = 11..13
+  cpu = run({0x620A, 0x6100, 0xA210, 0xD211, 0x6F0A, 0xA000, 0xDF11, 0x0000, 0x8000}, 7);
+  EXPECT_FALSE(cpu.display().get(10, 0));
+  EXPECT_TRUE(cpu.display().get(11, 0));
+  EXPECT_TRUE(cpu.display().get(13, 0));
+  EXPECT_FALSE(cpu.display().get(0, 0));
+  EXPECT_EQ(cpu.v(0xF), 1);
+}
+
 TEST(CPUTest, WaitForKey) {
   CPU cpu = run({0xF30A, 0x6001});
   EXPECT_EQ(cpu.pc(), 0x202); // halted on the instruction after FX0A
@@ -188,8 +213,14 @@ TEST(CPUTest, KeySkips) {
   cpu.step();
   EXPECT_EQ(cpu.pc(), 0x206);
 
-  cpu = run({0x60FF, 0xE09E}); // key above 0xF is never pressed
-  EXPECT_EQ(cpu.pc(), 0x204);
+  // only the lowest nibble of VX selects the key, so 0x15 is key 5
+  cpu = run({0x6015, 0xE09E, 0x0000, 0xE0A1}, 0);
+  cpu.setKey(5, true);
+  cpu.step();
+  cpu.step();
+  EXPECT_EQ(cpu.pc(), 0x206);
+  cpu.step();
+  EXPECT_EQ(cpu.pc(), 0x208); // EXA1 doesn't skip either
 }
 
 TEST(CPUTest, RandomIsMaskedByNN) {

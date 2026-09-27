@@ -172,6 +172,32 @@ func TestDrawClipsAtRightEdge(t *testing.T) {
 	expect(t, "wrapped pixel (1, 1)", c.display.Get(1, 1), false)
 }
 
+func TestDrawWrapsStartPosition(t *testing.T) {
+	// the top row of font "0" at (66, 33) starts at (2, 1)
+	c := run(t, 0x6042, 0x6121, 0xA000, 0xD011)
+	expect(t, "pixel (2, 1)", c.display.Get(2, 1), true)
+	expect(t, "pixel (5, 1)", c.display.Get(5, 1), true)
+	expect(t, "pixel (6, 1)", c.display.Get(6, 1), false)
+}
+
+func TestDrawWithVFAsCoordinate(t *testing.T) {
+	// VF = 10 is read as the X coordinate before it becomes the collision flag
+	c := run(t, 0x6F0A, 0x6100, 0xA000, 0xDF11)
+	expect(t, "pixel (10, 0)", c.display.Get(10, 0), true)
+	expect(t, "pixel (0, 0)", c.display.Get(0, 0), false)
+	expect(t, "VF", c.v[0xF], 0)
+
+	// with a pixel already lit at (10, 0), the collision is found and the rest of the
+	// row is still drawn at x = 11..13. 0x8000 at 0x210 is the one-pixel sprite; it and
+	// the 0x0000 before it also run as no-ops at the end.
+	c = run(t, 0x620A, 0x6100, 0xA210, 0xD211, 0x6F0A, 0xA000, 0xDF11, 0x0000, 0x8000)
+	expect(t, "pixel (10, 0)", c.display.Get(10, 0), false)
+	expect(t, "pixel (11, 0)", c.display.Get(11, 0), true)
+	expect(t, "pixel (13, 0)", c.display.Get(13, 0), true)
+	expect(t, "pixel (0, 0)", c.display.Get(0, 0), false)
+	expect(t, "VF", c.v[0xF], 1)
+}
+
 func TestWaitForKey(t *testing.T) {
 	c := run(t, 0xF30A, 0x6001)
 	expect(t, "PC", c.pc, 0x202) // halted on the instruction after FX0A
@@ -194,8 +220,17 @@ func TestKeySkips(t *testing.T) {
 	c.Step()
 	expect(t, "PC", c.pc, 0x206)
 
-	c = run(t, 0x60FF, 0xE09E) // key above 0xF is never pressed
-	expect(t, "PC", c.pc, 0x204)
+	// only the lowest nibble of VX selects the key, so 0x15 is key 5
+	c = NewCPU()
+	if err := c.Load([]byte{0x60, 0x15, 0xE0, 0x9E, 0x00, 0x00, 0xE0, 0xA1}); err != nil {
+		t.Fatal(err)
+	}
+	c.SetKey(5, true)
+	c.Step()
+	c.Step()
+	expect(t, "PC after EX9E", c.pc, 0x206)
+	c.Step()
+	expect(t, "PC after EXA1", c.pc, 0x208) // EXA1 doesn't skip either
 }
 
 func TestRandomIsMaskedByNN(t *testing.T) {

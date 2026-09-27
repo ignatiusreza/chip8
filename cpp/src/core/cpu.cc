@@ -227,29 +227,33 @@ void CPU::step() {
       VX = rand() & NN;
       PC += 2;
       break;
-    case 0xD000: // DXYN	(Draw Sprite @(VX, VY) with dimension Nx8, with data from memory at location I )
-      X = (opcode & 0x0F00) >> 8;
-      Y = (opcode & 0x00F0) >> 4;
+    case 0xD000: { // DXYN	(Draw Sprite @(VX, VY) with dimension Nx8, with data from memory at location I )
+      // read the coordinates before VF is reset, as VX or VY may be VF; the start
+      // position wraps around the screen, and the sprite is clipped at its edges
+      int x = VX % Display::WIDTH;
+      int y = VY % Display::HEIGHT;
 
       V[0xF] = 0; // Reset collision flag
       for (int yline = 0; yline < N; yline++){
         data = MEM(I + yline); //this retreives the byte for a given line of pixels
         for(int xpix = 0; xpix < 8; xpix++){
           if ((data & (0x80 >> xpix)) != 0){
-            if (_display.get(V[X] + xpix, V[Y] + yline)) V[0xF] = 1; //there has been a collision
-            _display.flip(V[X] + xpix, V[Y] + yline);	//note: coordinate registers from opcode
+            if (_display.get(x + xpix, y + yline)) V[0xF] = 1; //there has been a collision
+            _display.flip(x + xpix, y + yline);
           }
         }
       }
       PC += 2;
       break;
+    }
     case 0xE000:
       switch(opcode & 0xFF) {
+        // only the lowest nibble of VX selects the key
         case 0x009E: // EX9E	Skips the next instruction if the key stored in VX is pressed.
-          if(_keypad.key(VX)) PC += 2;
+          if(_keypad.key(VX & 0xF)) PC += 2;
           break;
         case 0x00A1: // EXA1	Skips the next instruction if the key stored in VX isn't pressed.
-          if(!_keypad.key(VX)) PC += 2;
+          if(!_keypad.key(VX & 0xF)) PC += 2;
           break;
       }
       PC += 2;
