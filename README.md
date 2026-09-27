@@ -7,8 +7,8 @@ A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) emulator, implemented in 
 - [`rust/`](rust/) - a port of the same emulator to Rust (crossterm, minifb, rodio)
 - [`go/`](go/) - a port of the same emulator to Go (x/term, Ebitengine, oto)
 
-The Rust and Go ports draw in the terminal they are started from by default, and can open
-a separate window instead with `--display window`.
+All three draw in the terminal they are started from by default, and can open a separate
+window instead with `--display window`.
 
 References for the bytecodes used is from :
 

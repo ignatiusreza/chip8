@@ -21,7 +21,8 @@ function(chip8_warnings target)
 endfunction()
 chip8_warnings(chip8_core)
 
-# The frontend uses SDL3 for the window, keyboard and beeper: the system copy if
+# The frontend draws in the terminal (POSIX only) or a window. It uses SDL3 for the
+# window, its keyboard, and the beeper: the system copy if
 # there is one, otherwise it is downloaded and built with the emulator.
 include(FetchContent)
 find_package(SDL3 3.2 CONFIG QUIET)
@@ -42,6 +43,7 @@ add_executable(chip8
   src/frontend/graphic.cc
   src/frontend/input.cc
   src/frontend/sound.cc
+  src/frontend/terminal.cc
 )
 target_include_directories(chip8 PRIVATE src)
 target_link_libraries(chip8 PRIVATE chip8_core SDL3::SDL3)
