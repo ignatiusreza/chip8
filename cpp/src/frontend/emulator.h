@@ -1,6 +1,7 @@
 #ifndef _CHIP8_FRONTEND_EMULATOR_H
 #define	_CHIP8_FRONTEND_EMULATOR_H
 
+#include <string>
 #include "../core/cpu.h"
 #include "graphic.h"
 #include "input.h"
@@ -15,6 +16,9 @@ class Emulator {
   Input   _input;
 
   public:
+    // opens the window (throwing std::runtime_error if it can't) and the audio device
+    explicit Emulator(const std::string &title) : _graphic(title) {}
+
     // copies the ROM into memory; returns false if it is too large
     bool load(const unsigned char *rom, std::size_t size) { return _cpu.load(rom, size); }
 

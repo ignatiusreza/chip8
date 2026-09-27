@@ -1,48 +1,38 @@
 #include "sound.h"
 
-Sound::Sound() {
-  SDL_AudioSpec desiredSpec;
-  SDL_AudioSpec obtainedSpec;
+#include <iostream>
+#include <vector>
 
-  _playing = false;
-  _phase = 0;
+Sound::Sound() : _stream(nullptr, SDL_DestroyAudioStream) {
+  if(!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+    std::cerr << "Sound disabled, could not open audio device: " << SDL_GetError() << std::endl;
+    return;
+  }
 
-  desiredSpec.freq = FREQUENCY;
-  desiredSpec.format = AUDIO_S16SYS;
-  desiredSpec.channels = 1;
-  // small buffer so the beep starts and stops close to the timer
-  desiredSpec.samples = 512;
-  desiredSpec.callback = callback;
-  desiredSpec.userdata = this;
+  const SDL_AudioSpec spec = {SDL_AUDIO_S16, 1, FREQUENCY};
+  _stream.reset(SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, callback, this));
+  if(!_stream) {
+    std::cerr << "Sound disabled, could not open audio device: " << SDL_GetError() << std::endl;
+    return;
+  }
 
-  SDL_OpenAudio(&desiredSpec, &obtainedSpec);
-
-  // start play audio
-  SDL_PauseAudio(0);
+  // start play audio; the stream starts paused
+  SDL_ResumeAudioStreamDevice(_stream.get());
 }
 
-Sound::~Sound() {
-  SDL_CloseAudio();
-}
+void Sound::callback(void *_sound, SDL_AudioStream *stream, int additional, int) {
+  Sound *sound = static_cast<Sound *>(_sound);
+  const int halfPeriod = FREQUENCY / BEEP_HZ / 2;
+  const bool playing = sound->_playing;
 
-void Sound::setPlaying(bool playing) {
-  SDL_LockAudio();
-  _playing = playing;
-  SDL_UnlockAudio();
-}
-
-void Sound::callback(void *_sound, Uint8 *_stream, int _length) {
-  Sound  *sound  = static_cast<Sound *>(_sound);
-  Sint16 *stream = reinterpret_cast<Sint16*>(_stream);
-  int length = _length / 2;
-  int halfPeriod = FREQUENCY / BEEP_HZ / 2;
-
-  for(int i = 0; i < length; i++) {
-    if(sound->_playing) {
-      stream[i] = (sound->_phase / halfPeriod) % 2 ? -AMPLITUDE : AMPLITUDE;
+  std::vector<Sint16> samples(additional / sizeof(Sint16));
+  for(Sint16 &sample : samples) {
+    if(playing) {
+      sample = (sound->_phase / halfPeriod) % 2 ? -AMPLITUDE : AMPLITUDE;
       sound->_phase = (sound->_phase + 1) % (halfPeriod * 2);
     } else {
-      stream[i] = 0;
+      sample = 0;
     }
   }
+  SDL_PutAudioStreamData(stream, samples.data(), samples.size() * sizeof(Sint16));
 }

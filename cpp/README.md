@@ -13,7 +13,7 @@ References for the bytecodes used is from :
 Building
 --------
 
-Install [CMake](https://cmake.org) 3.16 or newer, a C++17 compiler and SDL 1.2 (look below), then run
+Install [CMake](https://cmake.org) 3.16 or newer, a C++17 compiler and the build dependencies for SDL3 (look below), then run
 
     cmake -S . -B build
     cmake --build build
@@ -28,17 +28,19 @@ The code is split in two, like the Rust and Go ports:
   them to the CPU. `src/main.cc` just reads the ROM and runs the `Emulator` loop.
 
 
-[SDL (Simple DirectMedia Layer)](http://www.libsdl.org/)
--------------------------------------------------------
+[SDL (Simple DirectMedia Layer)](https://www.libsdl.org/)
+--------------------------------------------------------
 
-is used to handle graphics and audio,
-the included files under ./include and ./lib are used when compiling on Windows (e.g. with
-`cmake -S . -B build -A Win32`, as they are 32-bit), unless the `SDLDIR` environment variable points
-to another copy.
+version 3 is used to handle graphics and audio. The build uses the system SDL3 if there is one, and
+otherwise downloads it and builds it along with the emulator, on Windows and macOS as well.
 
-For compiling under linux, please use the distribution to install lib sdl
+To build SDL3 under linux, please install the development packages for X11/Wayland and audio,
+the full list is in [SDL's README-linux](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies)
 
-    e.g (on ubuntu) : sudo apt-get install libsdl1.2-dev
+    e.g (on ubuntu) : sudo apt-get install libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev libdecor-0-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
+
+Keys are matched by their position on the keyboard, so the [keypad layout](../README.md#keyboard) is the same on
+non-QWERTY keyboards. If no audio device is available the emulator runs without sound.
 
 
 [googletest](http://code.google.com/p/googletest/)

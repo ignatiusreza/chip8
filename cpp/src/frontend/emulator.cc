@@ -12,6 +12,6 @@ void Emulator::tick() {
     _cpu.step();
   }
 
-  // update screen if invalidated
-  _graphic.update(_cpu.display());
+  // update screen if invalidated, or uncovered
+  _graphic.update(_cpu.display(), _input.takeExposed());
 }

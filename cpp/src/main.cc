@@ -1,9 +1,11 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include "SDL.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include "core/cpu.h"
 #include "frontend/emulator.h"
 
@@ -36,26 +38,29 @@ int main(int argc, char *argv[]) {
   std::vector<unsigned char> rom;
   if(!readRom(argv[1], rom)) return 1;
 
-  /* Initialize defaults, Video and Audio */
-  if((SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) == -1)) {
+  /* Initialize defaults and Video; Sound opens the audio device itself */
+  if(!SDL_Init(SDL_INIT_VIDEO)) {
     std::cout << "Could not initialize SDL: " << SDL_GetError() << std::endl;
 
     return -1;
   }
 
-  SDL_WM_SetCaption((static_cast<std::string>("Chip 8 : ") +  argv[1]).c_str(),NULL);
-  {
+  int status = 0;
+  try {
     // scoped so the window and audio device close before SDL_Quit
-    Emulator emulator;
+    Emulator emulator(static_cast<std::string>("Chip 8 : ") + argv[1]);
     emulator.load(rom.data(), rom.size());
 
     while(emulator.isRunning()) {
       SDL_Delay(16);
       emulator.tick();
     }
+  } catch(const std::runtime_error &e) {
+    std::cout << e.what() << std::endl;
+    status = -1;
   }
 
   SDL_Quit();
 
-  return 0;
+  return status;
 }

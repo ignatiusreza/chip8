@@ -12,18 +12,29 @@ option(CHIP8_BUILD_TESTS "Build the unit tests" ON)
 add_library(chip8_core STATIC src/core/cpu.cc)
 target_include_directories(chip8_core PUBLIC src/core)
 
-if(MSVC)
-  target_compile_options(chip8_core PRIVATE /W4)
-else()
-  target_compile_options(chip8_core PRIVATE -Wall -Wextra)
-endif()
+function(chip8_warnings target)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /W4)
+  else()
+    target_compile_options(${target} PRIVATE -Wall -Wextra)
+  endif()
+endfunction()
+chip8_warnings(chip8_core)
 
-# The frontend uses SDL 1.2 for the window, keyboard and beeper. On Windows, the copy
-# under ./include and ./lib is used unless SDLDIR points elsewhere.
-if(WIN32 AND NOT DEFINED ENV{SDLDIR})
-  list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+# The frontend uses SDL3 for the window, keyboard and beeper: the system copy if
+# there is one, otherwise it is downloaded and built with the emulator.
+include(FetchContent)
+find_package(SDL3 3.2 CONFIG QUIET)
+if(NOT SDL3_FOUND)
+  FetchContent_Declare(SDL3
+    URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.16/SDL3-3.4.16.tar.gz
+    URL_HASH SHA256=7322236cd12090c3eb40b9728be4d49c76f66ad17d04369584d4ecad5cf77c68
+    DOWNLOAD_EXTRACT_TIMESTAMP ON)
+  set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+  set(SDL_STATIC ON CACHE BOOL "" FORCE)
+  set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(SDL3)
 endif()
-find_package(SDL 1.2 REQUIRED)
 
 add_executable(chip8
   src/main.cc
@@ -32,14 +43,9 @@ add_executable(chip8
   src/frontend/input.cc
   src/frontend/sound.cc
 )
-target_include_directories(chip8 PRIVATE src ${SDL_INCLUDE_DIR})
-target_link_libraries(chip8 PRIVATE chip8_core ${SDL_LIBRARY})
-
-if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/SDL.dll)
-  add_custom_command(TARGET chip8 POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      ${CMAKE_CURRENT_SOURCE_DIR}/SDL.dll $<TARGET_FILE_DIR:chip8>)
-endif()
+target_include_directories(chip8 PRIVATE src)
+target_link_libraries(chip8 PRIVATE chip8_core SDL3::SDL3)
+chip8_warnings(chip8)
 
 if(CHIP8_BUILD_TESTS)
   enable_testing()
@@ -47,7 +53,6 @@ if(CHIP8_BUILD_TESTS)
   # use the system googletest if there is one, otherwise download it
   find_package(GTest 1.10 QUIET)
   if(NOT GTest_FOUND)
-    include(FetchContent)
     FetchContent_Declare(googletest
       URL https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
       DOWNLOAD_EXTRACT_TIMESTAMP ON)
