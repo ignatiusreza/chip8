@@ -57,8 +57,8 @@ if(CHIP8_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
   endif()
 
-  add_executable(chip8_test test/main.cc)
-  target_link_libraries(chip8_test PRIVATE chip8_core GTest::gtest)
+  add_executable(chip8_test test/cpu_test.cc test/stack_test.cc)
+  target_link_libraries(chip8_test PRIVATE chip8_core GTest::gtest_main)
 
   include(GoogleTest)
   gtest_discover_tests(chip8_test)

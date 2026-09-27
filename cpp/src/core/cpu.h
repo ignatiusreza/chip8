@@ -29,7 +29,7 @@ class CPU {
   void _xF000();
 
   public:
-    static const std::size_t MAX_ROM_SIZE = MEMORY_SIZE - PROGRAM_START;
+    static constexpr std::size_t MAX_ROM_SIZE = MEMORY_SIZE - PROGRAM_START;
 
     CPU();
 
@@ -46,6 +46,14 @@ class CPU {
     void setKey(int key, bool pressed);
 
     Display &display() { return _display; }
+
+    // read-only views of the machine state, for tests and debugging
+    unsigned char v(int x) const { return V[x & 0xF]; }
+    unsigned short pc() const { return PC; }
+    unsigned short index() const { return I; }
+    unsigned char memory(int addr) const { return _memory[addr & (MEMORY_SIZE - 1)]; }
+    int stackSize() const { return _stack.size(); }
+    bool waitingForKey() const { return _waitForKey; }
 };
 
 #endif	/* _CHIP8_CORE_CPU_H */

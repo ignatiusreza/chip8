@@ -44,8 +44,9 @@ For compiling under linux, please use the distribution to install lib sdl
 [googletest](http://code.google.com/p/googletest/)
 -------------------------------------------------
 
-is used as a test framework, granted I included it here just to give it a try, and so far it
-only included basic test for the stack.
+is used as a test framework, granted I included it here just to give it a try. The tests cover the
+stack and the CPU's opcodes; the opcode tests are ported from the Rust and Go versions, so all three
+emulators are checked against the same behaviour.
 
 It is a really good test framework though, so in case you need a test framework for your C++ codes,
 give it a try.

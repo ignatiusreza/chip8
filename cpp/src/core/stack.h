@@ -10,45 +10,45 @@
 
 class Stack {
   public:
-    static const int CAPACITY = 16;
+    static constexpr int CAPACITY = 16;
 
   private:
+    // an index rather than a pointer into _values, so a copied Stack stays valid
     short _values[CAPACITY];
-    short *_tos;
-    short *_limit;
+    int _size;
 
   public:
-    Stack() {
-      _tos = _values;
-      _limit = (_tos + CAPACITY);
-    }
+    Stack() : _size(0) {}
 
     bool push(short val) {
       if(overflow()) return false;
 
-      *_tos++ = val;
+      _values[_size++] = val;
       return true;
     }
 
     short pop() {
       if(underflow()) return 0;
 
-      return *(--_tos);
+      return _values[--_size];
     }
 
-    short peek() {
+    short peek() const {
       if(underflow()) return 0;
-      return *(_tos-1);
+      return _values[_size-1];
     }
+
+    int size() const { return _size; }
+    bool empty() const { return underflow(); }
 
   private:
-    bool overflow() {
-      return (_tos == _limit);
+    bool overflow() const {
+      return (_size == CAPACITY);
     }
 
-    bool underflow() {
-      return (_tos == _values);
+    bool underflow() const {
+      return (_size == 0);
     }
 };
 
-#endif	/* _STACK_H */
+#endif	/* _CHIP8_CORE_STACK_H */

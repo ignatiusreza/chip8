@@ -162,7 +162,8 @@ void CPU::step() {
   switch(opcode & 0xF000) {
     case 0x0000:
       if(opcode == 0x00EE) { // return from a subroutine
-        PC = _stack.pop();
+        // with nothing to return to, restart the program rather than run the font data
+        PC = _stack.empty() ? PROGRAM_START : _stack.pop();
       }else if(opcode == 0x00E0) { // clear screen
         _display.clearScreen();
         PC += 2;

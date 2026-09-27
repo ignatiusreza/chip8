@@ -6,9 +6,9 @@
 // Monochrome 64x32 frame buffer.
 class Display {
   public:
-    static const int WIDTH = 64;
-    static const int HEIGHT = 32;
-    static const int BUFF_LENGTH = WIDTH * HEIGHT;
+    static constexpr int WIDTH = 64;
+    static constexpr int HEIGHT = 32;
+    static constexpr int BUFF_LENGTH = WIDTH * HEIGHT;
 
   private:
     std::bitset<BUFF_LENGTH> _buff;

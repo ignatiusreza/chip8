@@ -1,13 +1,11 @@
 /* 
- * File:   stack_test.h
+ * File:   stack_test.cc
  * Author: AlexisBlaze
  *
  * Created on January 12, 2011, 11:59 PM
  */
 
-#ifndef _CHIP8_TEST_STACK_TEST_H
-#define	_CHIP8_TEST_STACK_TEST_H
-
+#include <gtest/gtest.h>
 #include "stack.h"
 
 // The fixture for testing class Stack.
@@ -43,6 +41,19 @@ TEST_F(StackTest, PushPopTest) {
   ASSERT_EQ(0, s1.pop()); // underflow??
 }
 
+// Tests that a copied stack holds its own values.
+TEST_F(StackTest, CopyTest) {
+  ASSERT_TRUE(s1.push(1));
+  Stack s2 = s1;
+  ASSERT_TRUE(s2.push(2));
+
+  EXPECT_EQ(1, s1.size());
+  EXPECT_EQ(2, s2.size());
+  EXPECT_EQ(2, s2.pop());
+  EXPECT_EQ(1, s2.pop());
+  EXPECT_EQ(1, s1.pop());
+}
+
 // Tests that stack can store large enough value.
 TEST_F(StackTest, MaxValueTest) {
   int i = 0;
@@ -50,5 +61,3 @@ TEST_F(StackTest, MaxValueTest) {
   ASSERT_TRUE(s1.push(0xfff));
   ASSERT_EQ(0xfff, s1.pop());
 }
-
-#endif	/* _CHIP8_TEST_STACK_TEST_H */
