@@ -8,7 +8,7 @@
 #ifndef _CHIP8_TEST_STACK_TEST_H
 #define	_CHIP8_TEST_STACK_TEST_H
 
-#include "../../src/stack.h"
+#include "stack.h"
 
 // The fixture for testing class Stack.
 class StackTest : public ::testing::Test {

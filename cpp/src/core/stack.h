@@ -5,8 +5,8 @@
  * Created on January 12, 2011, 1:31 PM
  */
 
-#ifndef _CHIP8_LIB_STACK_H
-#define	_CHIP8_LIB_STACK_H
+#ifndef _CHIP8_CORE_STACK_H
+#define	_CHIP8_CORE_STACK_H
 
 class Stack {
   public:
