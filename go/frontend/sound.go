@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/ebitengine/oto/v3"
 )
 
 const (
@@ -15,20 +15,27 @@ const (
 	beepVolume = 0.1
 )
 
-// Sound is a square-wave beeper that plays while the sound timer is active.
+// Sound is a square-wave beeper that plays while the sound timer is active. It uses
+// oto directly rather than Ebitengine's audio package, which only starts once a window
+// is open, so it works with the terminal display too.
 type Sound struct {
-	player *audio.Player // nil when no audio device is available
+	player *oto.Player // nil when no audio device is available
 }
 
 // NewSound opens the audio device, or runs silently when there is none.
 func NewSound() *Sound {
-	player, err := audio.NewContext(sampleRate).NewPlayerF32(&squareWave{})
+	ctx, ready, err := oto.NewContext(&oto.NewContextOptions{
+		SampleRate:   sampleRate,
+		ChannelCount: 2,
+		Format:       oto.FormatFloat32LE,
+		BufferSize:   50 * time.Millisecond,
+	})
 	if err != nil {
 		log.Printf("Sound disabled, could not open audio device: %v", err)
 		return &Sound{}
 	}
-	player.SetBufferSize(50 * time.Millisecond)
-	return &Sound{player: player}
+	<-ready
+	return &Sound{player: ctx.NewPlayer(&squareWave{})}
 }
 
 func (s *Sound) SetPlaying(playing bool) {

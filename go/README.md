@@ -8,7 +8,9 @@ stack is a plain slice, capped at 16 entries.
 The emulator core (package [`chip8`](chip8)) has no windowing or audio dependency, so it
 can be unit tested on its own. Package [`frontend`](frontend) wires it to the outside
 world, like the C++ `Graphic`, `Input` and `Sound` classes, using
-[Ebitengine](https://ebitengine.org) for the window, keyboard and beeper. `main.go` just
+[x/term](https://pkg.go.dev/golang.org/x/term) for the terminal display and keyboard,
+[Ebitengine](https://ebitengine.org) for the window display and keyboard, and
+[oto](https://github.com/ebitengine/oto) for the beeper. `main.go` just parses the flags,
 loads the ROM and runs the `Emulator`.
 
 Building
@@ -23,8 +25,16 @@ then run the emulator with
 
     go run . ROM
 
+which draws in the terminal, or in a separate window with
+
+    go run . -display window ROM
+
 and the tests with
 
     go test ./...
+
+The terminal display is drawn as 64x16 half-block characters inside a border, which needs
+a terminal of at least 66x19. Terminals only report key presses (repeated while held), not
+releases, so a key counts as held for 200ms after its last press.
 
 If no audio device is available the emulator runs without sound.

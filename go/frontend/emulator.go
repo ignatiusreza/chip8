@@ -1,9 +1,9 @@
-// Package frontend wires the backend-free chip8 core to a window, keyboard and speaker,
-// using Ebitengine.
+// Package frontend wires the backend-free chip8 core to a screen (a terminal or a window),
+// keyboard and speaker.
 package frontend
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
+	"fmt"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
 )
@@ -13,54 +13,69 @@ const (
 	opcodesPerTick = 3
 )
 
-// Emulator is a CPU running a ROM, with its display, keypad and beeper hooked up.
-// It implements ebiten.Game, which drives it once per 1/60s tick.
-type Emulator struct {
-	cpu     *chip8.CPU
-	graphic *Graphic
-	input   *Input
-	sound   *Sound
+// Mode is where the display is shown and the keyboard read from.
+type Mode int
+
+const (
+	ModeTerminal Mode = iota // the terminal the emulator was started from (default)
+	ModeWindow               // a separate desktop window
+)
+
+// ParseMode parses a display mode name: "tui" (or "terminal"), or "window" (or "gui").
+func ParseMode(s string) (Mode, error) {
+	switch s {
+	case "tui", "terminal":
+		return ModeTerminal, nil
+	case "window", "gui":
+		return ModeWindow, nil
+	}
+	return 0, fmt.Errorf("unknown display %q, expected tui or window", s)
 }
 
-// New loads the ROM and sets up the window and audio device.
-func New(title string, rom []byte) (*Emulator, error) {
+// Emulator is a CPU running a ROM, with its display, keypad and beeper hooked up.
+type Emulator struct {
+	cpu   *chip8.CPU
+	input *Input
+	sound *Sound
+	title string
+	mode  Mode
+}
+
+// New loads the ROM and sets up the audio device.
+func New(title string, rom []byte, mode Mode) (*Emulator, error) {
 	cpu := chip8.NewCPU()
 	if err := cpu.Load(rom); err != nil {
 		return nil, err
 	}
 	return &Emulator{
-		cpu:     cpu,
-		graphic: NewGraphic(title),
-		input:   &Input{},
-		sound:   NewSound(),
+		cpu:   cpu,
+		input: &Input{},
+		sound: NewSound(),
+		title: title,
+		mode:  mode,
 	}, nil
 }
 
-// Run opens the window and runs the emulator until it is closed or Esc is pressed.
+// Run opens the terminal or window screen and runs the emulator until Esc is pressed
+// (or the window is closed).
 func (e *Emulator) Run() error {
-	ebiten.SetTPS(tps)
-	return ebiten.RunGame(e)
+	if e.mode == ModeWindow {
+		return runWindow(e, e.title)
+	}
+	return runTerminal(e, e.title)
 }
 
-// Update runs one tick: timers, keyboard, then a few opcodes.
-func (e *Emulator) Update() error {
+// tick runs one 1/60s tick: timers, keyboard, then a few opcodes. It reports false once
+// Esc was pressed.
+func (e *Emulator) tick(keys Keys) bool {
 	e.sound.SetPlaying(e.cpu.TickTimers())
-	e.input.Update(e.cpu)
+	e.input.Update(keys, e.cpu)
 	if e.input.QuitRequested() {
-		return ebiten.Termination
+		return false
 	}
 
 	for range opcodesPerTick {
 		e.cpu.Step()
 	}
-	return nil
-}
-
-// Draw updates the screen if invalidated.
-func (e *Emulator) Draw(screen *ebiten.Image) {
-	e.graphic.Draw(screen, e.cpu.Display())
-}
-
-func (e *Emulator) Layout(int, int) (int, int) {
-	return e.graphic.Layout()
+	return true
 }
