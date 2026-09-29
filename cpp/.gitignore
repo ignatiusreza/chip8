@@ -15,3 +15,6 @@
 # Build outputs
 /chip8
 /chip8_test
+
+# CMake build directory
+/build/

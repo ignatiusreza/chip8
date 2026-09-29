@@ -10,35 +10,49 @@ References for the bytecodes used is from :
 - http://en.wikipedia.org/wiki/CHIP-8
 - http://devernay.free.fr/hacks/chip8/schip.txt
 
-For compilation, install the required dependency (SDL - look below), then run make
+Building
+--------
 
-after compilation run the emulation using "chip8 ROM", no fancy GUI yet. :P
+Install [CMake](https://cmake.org), a C++17 compiler and [SDL3](https://www.libsdl.org/)
 
+    e.g (on ubuntu 25.04+) : sudo apt-get install cmake g++ libsdl3-dev
+    e.g (on macos)         : brew install cmake sdl3
 
-[SDL (Simple DirectMedia Layer)](http://www.libsdl.org/)
--------------------------------------------------------
+then build with
 
-is used to handle graphics and audio,
-the included files under ./include and ./lib is for compiling in windows using VisualStudio
+    cmake -S . -B build
+    cmake --build build
 
-For compiling under linux, please use the distribution to install lib sdl
+run the emulator in the terminal using "build/chip8 ROM", or in a window (the fancy GUI :P)
+using "build/chip8 --display window ROM",
 
-    e.g (on ubuntu) : sudo apt-get install libsdl1.2-dev
+and run the tests with
 
+    ctest --test-dir build
 
-[googletest](http://code.google.com/p/googletest/)
--------------------------------------------------
+If SDL3 or [googletest](https://github.com/google/googletest) isn't installed, CMake downloads and
+builds it; for SDL3 on linux that needs its
+[build dependencies](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies).
 
-is used as a test framework, granted I included it here just to give it a try, and so far it
-only included basic test for the stack.
+The terminal display is drawn as 64x16 half-block characters inside a border, which needs a
+terminal of at least 66x19. Terminals only report key presses (repeated while held), not releases,
+so a key counts as held for 200ms after its last press. It needs a POSIX terminal, so on Windows the
+window is the default.
 
-It is a really good test framework though, so in case you need a test framework for your C++ codes,
-give it a try.
+In the window, keys are matched by their position on the keyboard, so the
+[keypad layout](../README.md#keyboard) is the same on non-QWERTY keyboards. If no audio device is
+available the emulator runs without sound.
 
-The copy under ./test is for VisualStudio; under linux the Makefile uses the system googletest
+Code layout
+-----------
 
-    e.g (on ubuntu) : sudo apt-get install libgtest-dev
+The code is split in two, like the Rust and Go ports:
 
-after compilation, to run the test use :
+- `src/core/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`, `Stack`), built as the `chip8_core`
+  library. It has no SDL dependency, so it can be unit tested on its own.
+- `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
+  screen is either the `Terminal`, or a `Window` made of the SDL `Graphic` and `Input` classes.
+  `src/main.cc` just parses the options, reads the ROM and runs the `Emulator` loop.
 
-    ./chip8_test
+The tests in `test/` cover the stack and the CPU's opcodes; the opcode tests are ported from the
+Rust and Go versions, so all three emulators are checked against the same behaviour.

@@ -3,9 +3,12 @@ chip8
 
 A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) emulator, implemented in more than one language.
 
-- [`cpp/`](cpp/) - the original C++ implementation (SDL 1.2, googletest)
-- [`rust/`](rust/) - a port of the same emulator to Rust (minifb, rodio)
-- [`go/`](go/) - a port of the same emulator to Go (Ebitengine)
+- [`cpp/`](cpp/) - the original C++ implementation (SDL3, googletest)
+- [`rust/`](rust/) - a port of the same emulator to Rust (crossterm, minifb, rodio)
+- [`go/`](go/) - a port of the same emulator to Go (x/term, Ebitengine, oto)
+
+All three draw in the terminal they are started from by default, and can open a separate
+window instead with `--display window`.
 
 References for the bytecodes used is from :
 

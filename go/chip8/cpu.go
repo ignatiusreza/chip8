@@ -168,10 +168,11 @@ func (c *CPU) execute(opcode uint16) {
 		c.draw(x, y, n)
 	case 0xE000:
 		switch nn {
+		// only the lowest nibble of VX selects the key
 		case 0x9E: // EX9E (skip if key VX is pressed)
-			c.skipIf(c.keypad.Key(c.v[x]))
+			c.skipIf(c.keypad.Key(c.v[x] & 0xF))
 		case 0xA1: // EXA1 (skip if key VX isn't pressed)
-			c.skipIf(!c.keypad.Key(c.v[x]))
+			c.skipIf(!c.keypad.Key(c.v[x] & 0xF))
 		}
 	case 0xF000:
 		c.xF000(x, nn)
@@ -240,8 +241,9 @@ func (c *CPU) xF000(x int, nn byte) {
 }
 
 // draw implements DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision.
+// The start position wraps around the screen, and the sprite is clipped at its edges.
 func (c *CPU) draw(x, y int, n byte) {
-	vx, vy := int(c.v[x]), int(c.v[y])
+	vx, vy := int(c.v[x])%Width, int(c.v[y])%Height
 	c.v[0xF] = 0
 	for yline := 0; yline < int(n); yline++ {
 		data := c.memory[(c.i+uint16(yline))&addrMask]

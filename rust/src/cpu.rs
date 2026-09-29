@@ -168,9 +168,10 @@ impl Cpu {
             0xB000 => self.pc = (nnn + self.v[0] as u16) & 0xFFF, // BNNN (PC = NNN + V0)
             0xC000 => self.v[x] = self.random() & nn,       // CXNN (VX = random() & NN)
             0xD000 => self.draw(x, y, n),
+            // only the lowest nibble of VX selects the key
             0xE000 => match nn {
-                0x9E => self.skip_if(self.keypad.key(self.v[x])), // EX9E (skip if key VX is pressed)
-                0xA1 => self.skip_if(!self.keypad.key(self.v[x])), // EXA1 (skip if key VX isn't pressed)
+                0x9E => self.skip_if(self.keypad.key(self.v[x] & 0xF)), // EX9E (skip if key VX is pressed)
+                0xA1 => self.skip_if(!self.keypad.key(self.v[x] & 0xF)), // EXA1 (skip if key VX isn't pressed)
                 _ => {}
             },
             0xF000 => self.xf000(x, nn),
@@ -249,8 +250,10 @@ impl Cpu {
     }
 
     /// DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision.
+    /// The start position wraps around the screen, and the sprite is clipped at its edges.
     fn draw(&mut self, x: usize, y: usize, n: u8) {
-        let (vx, vy) = (self.v[x] as usize, self.v[y] as usize);
+        let vx = self.v[x] as usize % Display::WIDTH;
+        let vy = self.v[y] as usize % Display::HEIGHT;
         self.v[0xF] = 0;
         for yline in 0..n as usize {
             let data = self.memory[(self.i as usize + yline) & 0xFFF];
@@ -411,6 +414,36 @@ mod tests {
     }
 
     #[test]
+    fn draw_wraps_start_position() {
+        // the top row of font "0" at (66, 33) starts at (2, 1)
+        let cpu = run(&[0x6042, 0x6121, 0xA000, 0xD011]);
+        assert!(cpu.display.get(2, 1));
+        assert!(cpu.display.get(5, 1));
+        assert!(!cpu.display.get(6, 1));
+    }
+
+    #[test]
+    fn draw_with_vf_as_coordinate() {
+        // VF = 10 is read as the X coordinate before it becomes the collision flag
+        let cpu = run(&[0x6F0A, 0x6100, 0xA000, 0xDF11]);
+        assert!(cpu.display.get(10, 0));
+        assert!(!cpu.display.get(0, 0));
+        assert_eq!(cpu.v[0xF], 0);
+
+        // with a pixel already lit at (10, 0), the collision is found and the rest of
+        // the row is still drawn at x = 11..13. 0x8000 at 0x210 is the one-pixel
+        // sprite; it and the 0x0000 before it also run as no-ops at the end.
+        let cpu = run(&[
+            0x620A, 0x6100, 0xA210, 0xD211, 0x6F0A, 0xA000, 0xDF11, 0x0000, 0x8000,
+        ]);
+        assert!(!cpu.display.get(10, 0));
+        assert!(cpu.display.get(11, 0));
+        assert!(cpu.display.get(13, 0));
+        assert!(!cpu.display.get(0, 0));
+        assert_eq!(cpu.v[0xF], 1);
+    }
+
+    #[test]
     fn wait_for_key() {
         let mut cpu = run(&[0xF30A, 0x6001]);
         assert_eq!(cpu.pc, 0x202); // halted on the instruction after FX0A
@@ -429,6 +462,17 @@ mod tests {
         cpu.step();
         cpu.step();
         assert_eq!(cpu.pc, 0x206);
+
+        // only the lowest nibble of VX selects the key, so 0x15 is key 5
+        let mut cpu = Cpu::with_seed(1);
+        cpu.load(&[0x60, 0x15, 0xE0, 0x9E, 0x00, 0x00, 0xE0, 0xA1])
+            .unwrap();
+        cpu.set_key(5, true);
+        cpu.step();
+        cpu.step();
+        assert_eq!(cpu.pc, 0x206);
+        cpu.step();
+        assert_eq!(cpu.pc, 0x208); // EXA1 doesn't skip either
     }
 
     #[test]
