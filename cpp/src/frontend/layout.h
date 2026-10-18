@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include "../core/settings.h"
+#include "../chip8/settings.h"
 
 // The terminal shows the game as a title line above a bordered box of character cells,
 // with the ROM's how to play next to it or below it, all centred in the terminal.

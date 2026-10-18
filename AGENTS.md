@@ -12,9 +12,9 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 
 | Concern | C++ | Rust | Go |
 |---|---|---|---|
-| CPU, opcodes, quirks | `cpp/src/core/cpu.{h,cc}` | `rust/src/cpu.rs` | `go/chip8/cpu.go` |
-| Display, keypad | `cpp/src/core/*.h` | `rust/src/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
-| ROM settings files | `cpp/src/core/settings.cc` | `rust/src/settings.rs` | `go/chip8/settings.go` |
+| CPU, opcodes, quirks | `cpp/src/chip8/cpu.{h,cc}` | `rust/src/cpu.rs` | `go/chip8/cpu.go` |
+| Display, keypad | `cpp/src/chip8/*.h` | `rust/src/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
+| ROM settings files | `cpp/src/chip8/settings.cc` | `rust/src/settings.rs` | `go/chip8/settings.go` |
 | Terminal layout | `cpp/src/frontend/layout.cc` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
 | Command line options | `cpp/src/frontend/options.cc` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |

@@ -1,5 +1,5 @@
-#ifndef _CHIP8_CORE_SETTINGS_H
-#define	_CHIP8_CORE_SETTINGS_H
+#ifndef _CHIP8_CHIP8_SETTINGS_H
+#define	_CHIP8_CHIP8_SETTINGS_H
 
 #include <optional>
 #include <string>
@@ -49,4 +49,4 @@ std::string romSettingsPath(const std::string &romPath);
 // none; returns false and sets `error` if it can't be read or is invalid
 bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error);
 
-#endif	/* _CHIP8_CORE_SETTINGS_H */
+#endif	/* _CHIP8_CHIP8_SETTINGS_H */

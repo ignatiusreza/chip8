@@ -9,8 +9,8 @@ option(CHIP8_BUILD_TESTS "Build the unit tests" ON)
 
 # The emulator core has no windowing or audio dependency, so it can be unit tested
 # on its own.
-add_library(chip8_core STATIC src/core/cpu.cc src/core/settings.cc)
-target_include_directories(chip8_core PUBLIC src/core)
+add_library(chip8_core STATIC src/chip8/cpu.cc src/chip8/settings.cc)
+target_include_directories(chip8_core PUBLIC src/chip8)
 
 function(chip8_warnings target)
   if(MSVC)

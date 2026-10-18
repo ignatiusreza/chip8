@@ -1,5 +1,5 @@
-#ifndef _CHIP8_CORE_CPU_H
-#define	_CHIP8_CORE_CPU_H
+#ifndef _CHIP8_CHIP8_CPU_H
+#define	_CHIP8_CHIP8_CPU_H
 
 #include <cstddef>
 #include <string>
@@ -97,4 +97,4 @@ class CPU {
     bool exited() const { return _exited; }
 };
 
-#endif	/* _CHIP8_CORE_CPU_H */
+#endif	/* _CHIP8_CHIP8_CPU_H */

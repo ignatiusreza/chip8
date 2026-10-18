@@ -3,8 +3,8 @@
 
 #include <string>
 #include <vector>
-#include "../core/cpu.h"
-#include "../core/settings.h"
+#include "../chip8/cpu.h"
+#include "../chip8/settings.h"
 
 // Where the display is shown and the keyboard read from.
 enum class DisplayMode {

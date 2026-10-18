@@ -1,7 +1,7 @@
 #ifndef _CHIP8_FRONTEND_SCREEN_H
 #define	_CHIP8_FRONTEND_SCREEN_H
 
-#include "../core/display.h"
+#include "../chip8/display.h"
 #include "input.h"
 
 // Where the display is shown and the keyboard read from: the terminal or a window.

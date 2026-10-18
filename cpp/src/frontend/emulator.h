@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <string>
-#include "../core/cpu.h"
+#include "../chip8/cpu.h"
 #include "input.h"
 #include "options.h"
 #include "screen.h"

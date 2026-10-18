@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <SDL3/SDL.h>
-#include "../core/display.h"
+#include "../chip8/display.h"
 
 // The emulator window, showing the 128x64 frame scaled 5x, so low resolution pixels are
 // scaled 10x.

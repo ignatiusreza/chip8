@@ -2,7 +2,7 @@
 #define	_CHIP8_FRONTEND_INPUT_H
 
 #include <array>
-#include "../core/cpu.h"
+#include "../chip8/cpu.h"
 
 // The keys held down this frame, as read from a window or terminal.
 struct Keys {

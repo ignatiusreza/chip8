@@ -51,7 +51,7 @@ Code layout
 
 The code is split in two, like the Rust and Go ports:
 
-- `src/core/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`) and the ROM settings file
+- `src/chip8/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`) and the ROM settings file
   parser (`settings.cc`), built as the `chip8_core` library. It has no SDL dependency, so it
   can be unit tested on its own.
 - `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
