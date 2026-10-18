@@ -244,13 +244,17 @@ TEST(CPUTest, ParseQuirks) {
   Quirks quirks;
   std::string unknown;
   EXPECT_TRUE(quirks.parse("octo", unknown));
-  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.wrap);
-  EXPECT_FALSE(quirks.vfReset || quirks.jump);
+  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.wrap && quirks.jumpV0);
+  EXPECT_FALSE(quirks.vfReset || quirks.vblank);
 
   // presets reset the quirks named before them, single quirks add to them
-  EXPECT_TRUE(quirks.parse("wrap,vip,jump", unknown));
-  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.vfReset && quirks.vblank && quirks.jump);
+  EXPECT_TRUE(quirks.parse("wrap,vip,vf-reset", unknown));
+  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.vfReset && quirks.vblank && quirks.jumpV0);
   EXPECT_FALSE(quirks.wrap);
+
+  EXPECT_TRUE(quirks.parse("octo,schip,jump-v0", unknown));
+  EXPECT_TRUE(quirks.jumpV0);
+  EXPECT_FALSE(quirks.shift || quirks.loadStore || quirks.wrap);
 
   EXPECT_FALSE(quirks.parse("schip,bogus", unknown));
   EXPECT_EQ(unknown, "bogus");
@@ -289,14 +293,15 @@ TEST(CPUTest, VFResetQuirk) {
   }
 }
 
-TEST(CPUTest, JumpQuirkUsesVX) {
+TEST(CPUTest, JumpV0QuirkUsesV0) {
+  // B300 jumps to 0x300 + V3 like SUPER-CHIP, or to 0x300 + V0 with the quirk
   CPU cpu = run({0x6004, 0x6302, 0xB300});
-  EXPECT_EQ(cpu.pc(), 0x304);
+  EXPECT_EQ(cpu.pc(), 0x302);
 
   Quirks quirks;
-  quirks.jump = true;
+  quirks.jumpV0 = true;
   cpu = run({0x6004, 0x6302, 0xB300}, -1, quirks);
-  EXPECT_EQ(cpu.pc(), 0x302);
+  EXPECT_EQ(cpu.pc(), 0x304);
 }
 
 TEST(CPUTest, VBlankQuirkWaitsForTheNextFrame) {

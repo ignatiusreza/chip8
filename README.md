@@ -37,33 +37,37 @@ Quirks
 ------
 
 CHIP-8 interpreters disagree on a few instructions, and ROMs are written for one behaviour or
-the other. `--quirks` (`-quirks` in Go) picks them with a comma separated list of presets and
-quirks, applied from left to right, starting from the default (`octo`). A preset sets every
-quirk, a quirk name turns that one on:
+the other. Without quirks the emulators behave like SUPER-CHIP 1.1; each quirk turns on the
+behaviour of the original COSMAC VIP interpreter or of Octo instead:
 
 | Quirk        | Behaviour                                                              |
 |--------------|------------------------------------------------------------------------|
 | `shift`      | `8XY6`/`8XYE` shift `VY` into `VX`, instead of shifting `VX` in place  |
 | `load-store` | `FX55`/`FX65` leave `I` pointing past the last register               |
 | `vf-reset`   | `8XY1`/`8XY2`/`8XY3` reset `VF` to 0                                   |
-| `jump`       | `BNNN` jumps to `NNN + VX` (`X` being the top nibble), instead of `V0` |
+| `jump-v0`    | `BNNN` jumps to `NNN + V0`, instead of `XNN + VX` (`X` being the top nibble) |
 | `wrap`       | sprites wrap around the screen edges, instead of being clipped        |
 | `vblank`     | `DXYN` waits for the next frame, so at most one sprite is drawn per frame |
 
-| Preset  | Quirks                             | For ROMs written for                 |
-|---------|------------------------------------|--------------------------------------|
-| `octo`  | `shift,load-store,wrap`            | [Octo](https://github.com/JohnEarnest/Octo)'s defaults, like most modern homebrew (the default) |
-| `vip`   | `shift,load-store,vf-reset,vblank` | the original COSMAC VIP interpreter  |
-| `schip` | `jump`                             | SUPER-CHIP 1.1                       |
-| `none`  | -                                  | SUPER-CHIP, but with `BNNN` relative to `V0` |
+A preset sets every quirk at once:
 
-For example `--quirks vip`, `--quirks vf-reset` (`octo` plus `vf-reset`) or
-`--quirks none,shift`.
+| Preset  | Quirks                                     | For ROMs written for                 |
+|---------|--------------------------------------------|--------------------------------------|
+| `octo`  | `shift,load-store,jump-v0,wrap`            | [Octo](https://github.com/JohnEarnest/Octo)'s defaults, like most modern homebrew (the default) |
+| `vip`   | `shift,load-store,vf-reset,jump-v0,vblank` | the original COSMAC VIP interpreter  |
+| `schip` | -                                          | SUPER-CHIP 1.1                       |
 
-`octo` is the default as it runs the most programs: of the 76 CHIP-8 and SUPER-CHIP programs in
-the [Chip8 Community Archive](https://github.com/JohnEarnest/chip8Archive), 71 were made for
-its `shift`, `load-store`, `jump` and `vf-reset` behaviour and 67 for its `wrap`. Its `shift`
-and `load-store` are also what the original COSMAC VIP did, which most classic ROMs rely on.
+`--quirks` (`-quirks` in Go) takes a comma separated list of presets and quirks, applied from
+left to right, starting from the default (`octo`). For example `--quirks vip`,
+`--quirks vf-reset` (`octo` plus `vf-reset`) or `--quirks schip,shift` (SUPER-CHIP plus
+`shift`).
+
+`octo` is the default as it runs the most programs. Of the 76 CHIP-8 and SUPER-CHIP programs in
+the [Chip8 Community Archive](https://github.com/JohnEarnest/chip8Archive), 64 were made for
+exactly the `octo` quirks, 4 for `vip` and 4 for `schip`; the other 4 need a mix (see
+[`roms/`](roms/) for examples). `octo` and `vip` share the instruction behaviour (`shift`,
+`load-store` and `jump-v0`) that 71 of those programs and most classic ROMs rely on, and differ
+only in the display (`wrap` against `vblank`) and in `vf-reset`.
 
 Speed
 -----

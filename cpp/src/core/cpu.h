@@ -15,17 +15,17 @@
 #define BIG_FONT_BYTE_LENGTH 10
 
 // Behaviours where CHIP-8 interpreters disagree. With all of them off (the default) the
-// CPU behaves like SUPER-CHIP, except that BNNN jumps relative to V0.
+// CPU behaves like SUPER-CHIP 1.1; each quirk turns on another interpreter's behaviour.
 struct Quirks {
   bool shift = false;     // 8XY6/8XYE shift VY into VX, instead of shifting VX in place
   bool loadStore = false; // FX55/FX65 leave I pointing past the last register
   bool vfReset = false;   // 8XY1/8XY2/8XY3 reset VF to 0
-  bool jump = false;      // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
+  bool jumpV0 = false;    // BNNN jumps to NNN + V0, instead of XNN + VX (X being the top nibble)
   bool wrap = false;      // sprites wrap around the screen edges, instead of being clipped
   bool vblank = false;    // DXYN waits for the next frame, so at most one sprite is drawn per frame
 
-  // applies a comma separated list of presets (none, vip, schip, octo), which set every
-  // quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank), which turn one on,
+  // applies a comma separated list of presets (octo, vip, schip), which set every quirk,
+  // and quirk names (shift, load-store, vf-reset, jump-v0, wrap, vblank), which turn one on,
   // from left to right; returns false and sets `unknown` on a name it doesn't know
   bool parse(const std::string &list, std::string &unknown);
 };

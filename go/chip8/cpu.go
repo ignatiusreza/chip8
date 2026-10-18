@@ -63,12 +63,13 @@ func (e *RomTooLargeError) Error() string {
 }
 
 // Quirks are behaviours where CHIP-8 interpreters disagree. With all of them off (the
-// default) the CPU behaves like SUPER-CHIP, except that BNNN jumps relative to V0.
+// default) the CPU behaves like SUPER-CHIP 1.1; each quirk turns on another interpreter's
+// behaviour.
 type Quirks struct {
 	Shift     bool // 8XY6/8XYE shift VY into VX, instead of shifting VX in place
 	LoadStore bool // FX55/FX65 leave I pointing past the last register
 	VFReset   bool // 8XY1/8XY2/8XY3 reset VF to 0
-	Jump      bool // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
+	JumpV0    bool // BNNN jumps to NNN + V0, instead of XNN + VX (X being the top nibble)
 	Wrap      bool // sprites wrap around the screen edges, instead of being clipped
 	VBlank    bool // DXYN waits for the next frame, so at most one sprite is drawn per frame
 }
@@ -78,34 +79,32 @@ func ParseQuirks(s string) (Quirks, error) {
 	return Quirks{}.Apply(s)
 }
 
-// Apply applies a comma separated list of presets (none, vip, schip, octo), which set every
-// quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank), which turn one
-// on, from left to right.
+// Apply applies a comma separated list of presets (octo, vip, schip), which set every quirk,
+// and quirk names (shift, load-store, vf-reset, jump-v0, wrap, vblank), which turn one on,
+// from left to right.
 func (q Quirks) Apply(s string) (Quirks, error) {
 	for _, name := range strings.Split(s, ",") {
 		switch name {
-		case "none":
-			q = Quirks{}
-		case "vip":
-			q = Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true}
-		case "schip":
-			q = Quirks{Jump: true}
 		case "octo":
-			q = Quirks{Shift: true, LoadStore: true, Wrap: true}
+			q = Quirks{Shift: true, LoadStore: true, Wrap: true, JumpV0: true}
+		case "vip":
+			q = Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true, JumpV0: true}
+		case "schip":
+			q = Quirks{}
 		case "shift":
 			q.Shift = true
 		case "load-store":
 			q.LoadStore = true
 		case "vf-reset":
 			q.VFReset = true
-		case "jump":
-			q.Jump = true
+		case "jump-v0":
+			q.JumpV0 = true
 		case "wrap":
 			q.Wrap = true
 		case "vblank":
 			q.VBlank = true
 		default:
-			return Quirks{}, fmt.Errorf("unknown quirk %q, expected none, vip, schip, octo, shift, load-store, vf-reset, jump, wrap or vblank", name)
+			return Quirks{}, fmt.Errorf("unknown quirk %q, expected octo, vip, schip, shift, load-store, vf-reset, jump-v0, wrap or vblank", name)
 		}
 	}
 	return q, nil
@@ -258,10 +257,10 @@ func (c *CPU) execute(opcode uint16) {
 		c.skipIf(c.v[x] != c.v[y])
 	case 0xA000: // ANNN (I = NNN)
 		c.i = nnn
-	case 0xB000: // BNNN (PC = NNN + V0), or BXNN (PC = XNN + VX) with the jump quirk
-		offset := c.v[0]
-		if c.quirks.Jump {
-			offset = c.v[x]
+	case 0xB000: // BXNN (PC = XNN + VX), or BNNN (PC = NNN + V0) with the jump-v0 quirk
+		offset := c.v[x]
+		if c.quirks.JumpV0 {
+			offset = c.v[0]
 		}
 		c.pc = (nnn + uint16(offset)) & addrMask
 	case 0xC000: // CXNN (VX = random() & NN)

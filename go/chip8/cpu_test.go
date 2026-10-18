@@ -262,14 +262,20 @@ func TestParseQuirks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect(t, "octo", q, Quirks{Shift: true, LoadStore: true, Wrap: true})
+	expect(t, "octo", q, Quirks{Shift: true, LoadStore: true, Wrap: true, JumpV0: true})
 
 	// presets reset the quirks named before them, single quirks add to them
-	q, err = ParseQuirks("wrap,vip,jump")
+	q, err = ParseQuirks("wrap,vip,vf-reset")
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect(t, "wrap,vip,jump", q, Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true, Jump: true})
+	expect(t, "wrap,vip,vf-reset", q, Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true, JumpV0: true})
+
+	q, err = ParseQuirks("octo,schip,jump-v0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "octo,schip,jump-v0", q, Quirks{JumpV0: true})
 
 	if _, err := ParseQuirks("schip,bogus"); err == nil || !strings.Contains(err.Error(), `"bogus"`) {
 		t.Errorf("ParseQuirks(schip,bogus) error = %v, want one naming \"bogus\"", err)
@@ -312,9 +318,10 @@ func TestVBlankQuirkWaitsForTheNextFrame(t *testing.T) {
 	expect(t, "V0", c.v[0], 1)
 }
 
-func TestJumpQuirkUsesVX(t *testing.T) {
-	expect(t, "PC", run(t, 0x6004, 0x6302, 0xB300).pc, 0x304)
-	expect(t, "PC", runWith(t, Quirks{Jump: true}, 0x6004, 0x6302, 0xB300).pc, 0x302)
+func TestJumpV0QuirkUsesV0(t *testing.T) {
+	// B300 jumps to 0x300 + V3 like SUPER-CHIP, or to 0x300 + V0 with the quirk
+	expect(t, "PC", run(t, 0x6004, 0x6302, 0xB300).pc, 0x302)
+	expect(t, "PC", runWith(t, Quirks{JumpV0: true}, 0x6004, 0x6302, 0xB300).pc, 0x304)
 }
 
 func TestWrapQuirkWrapsSprites(t *testing.T) {

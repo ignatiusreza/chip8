@@ -23,16 +23,16 @@ func TestQuirksStartFromTheDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if q := settings.Quirks; !q.Shift || !q.LoadStore || !q.Wrap || !q.VFReset {
+	if q := settings.Quirks; !q.Shift || !q.LoadStore || !q.Wrap || !q.JumpV0 || !q.VFReset {
 		t.Errorf("Quirks = %+v, want octo and vf-reset", q)
 	}
 
-	settings, err = ParseRomSettings("quirks = none,jump\n")
+	settings, err = ParseRomSettings("quirks = schip,shift\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if q := settings.Quirks; q.Shift || q.Wrap || !q.Jump {
-		t.Errorf("Quirks = %+v, want only jump", q)
+	if q := settings.Quirks; q.LoadStore || q.Wrap || q.JumpV0 || !q.Shift {
+		t.Errorf("Quirks = %+v, want only shift", q)
 	}
 }
 

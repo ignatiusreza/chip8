@@ -59,7 +59,8 @@ impl std::fmt::Display for RomTooLarge {
 impl std::error::Error for RomTooLarge {}
 
 /// Behaviours where CHIP-8 interpreters disagree. With all of them off (the default)
-/// the CPU behaves like SUPER-CHIP, except that BNNN jumps relative to V0.
+/// the CPU behaves like SUPER-CHIP 1.1; each quirk turns on another interpreter's
+/// behaviour.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Quirks {
     /// 8XY6/8XYE shift VY into VX, instead of shifting VX in place.
@@ -68,8 +69,8 @@ pub struct Quirks {
     pub load_store: bool,
     /// 8XY1/8XY2/8XY3 reset VF to 0.
     pub vf_reset: bool,
-    /// BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0.
-    pub jump: bool,
+    /// BNNN jumps to NNN + V0, instead of XNN + VX (X being the top nibble).
+    pub jump_v0: bool,
     /// Sprites wrap around the screen edges, instead of being clipped.
     pub wrap: bool,
     /// DXYN waits for the next frame, so at most one sprite is drawn per frame.
@@ -77,46 +78,42 @@ pub struct Quirks {
 }
 
 impl Quirks {
-    /// Applies a comma separated list of presets (none, vip, schip, octo), which set
-    /// every quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank),
+    /// Applies a comma separated list of presets (octo, vip, schip), which set every
+    /// quirk, and quirk names (shift, load-store, vf-reset, jump-v0, wrap, vblank),
     /// which turn one on, from left to right.
     pub fn apply(self, list: &str) -> Result<Self, String> {
         let mut quirks = self;
         for name in list.split(',') {
             match name {
-                "none" => quirks = Quirks::default(),
+                "octo" => {
+                    quirks = Quirks {
+                        shift: true,
+                        load_store: true,
+                        wrap: true,
+                        jump_v0: true,
+                        ..Quirks::default()
+                    }
+                }
                 "vip" => {
                     quirks = Quirks {
                         shift: true,
                         load_store: true,
                         vf_reset: true,
                         vblank: true,
+                        jump_v0: true,
                         ..Quirks::default()
                     }
                 }
-                "schip" => {
-                    quirks = Quirks {
-                        jump: true,
-                        ..Quirks::default()
-                    }
-                }
-                "octo" => {
-                    quirks = Quirks {
-                        shift: true,
-                        load_store: true,
-                        wrap: true,
-                        ..Quirks::default()
-                    }
-                }
+                "schip" => quirks = Quirks::default(),
                 "shift" => quirks.shift = true,
                 "load-store" => quirks.load_store = true,
                 "vf-reset" => quirks.vf_reset = true,
-                "jump" => quirks.jump = true,
+                "jump-v0" => quirks.jump_v0 = true,
                 "wrap" => quirks.wrap = true,
                 "vblank" => quirks.vblank = true,
                 _ => {
                     return Err(format!(
-                        "unknown quirk {name:?}, expected none, vip, schip, octo, shift, load-store, vf-reset, jump, wrap or vblank"
+                        "unknown quirk {name:?}, expected octo, vip, schip, shift, load-store, vf-reset, jump-v0, wrap or vblank"
                     ))
                 }
             }
@@ -287,9 +284,9 @@ impl Cpu {
             0x8000 => self.x8000(x, y, n),
             0x9000 => self.skip_if(self.v[x] != self.v[y]), // 9XY0 (skip next inst if VX != VY)
             0xA000 => self.i = nnn,                         // ANNN (I = NNN)
-            // BNNN (PC = NNN + V0), or BXNN (PC = XNN + VX) with the jump quirk
+            // BXNN (PC = XNN + VX), or BNNN (PC = NNN + V0) with the jump-v0 quirk
             0xB000 => {
-                let offset = if self.quirks.jump {
+                let offset = if !self.quirks.jump_v0 {
                     self.v[x]
                 } else {
                     self.v[0]
@@ -666,21 +663,31 @@ mod tests {
                 shift: true,
                 load_store: true,
                 wrap: true,
+                jump_v0: true,
                 ..Quirks::default()
             }
         );
 
         // presets reset the quirks named before them, single quirks add to them
-        let quirks: Quirks = "wrap,vip,jump".parse().unwrap();
+        let quirks: Quirks = "wrap,vip,vf-reset".parse().unwrap();
         assert_eq!(
             quirks,
             Quirks {
                 shift: true,
                 load_store: true,
                 vf_reset: true,
-                jump: true,
+                jump_v0: true,
                 wrap: false,
                 vblank: true,
+            }
+        );
+
+        let quirks: Quirks = "octo,schip,jump-v0".parse().unwrap();
+        assert_eq!(
+            quirks,
+            Quirks {
+                jump_v0: true,
+                ..Quirks::default()
             }
         );
 
@@ -745,14 +752,15 @@ mod tests {
     }
 
     #[test]
-    fn jump_quirk_uses_vx() {
-        assert_eq!(run(&[0x6004, 0x6302, 0xB300]).pc, 0x304);
+    fn jump_v0_quirk_uses_v0() {
+        // B300 jumps to 0x300 + V3 like SUPER-CHIP, or to 0x300 + V0 with the quirk
+        assert_eq!(run(&[0x6004, 0x6302, 0xB300]).pc, 0x302);
 
         let quirks = Quirks {
-            jump: true,
+            jump_v0: true,
             ..Quirks::default()
         };
-        assert_eq!(run_with(quirks, &[0x6004, 0x6302, 0xB300]).pc, 0x302);
+        assert_eq!(run_with(quirks, &[0x6004, 0x6302, 0xB300]).pc, 0x304);
     }
 
     #[test]

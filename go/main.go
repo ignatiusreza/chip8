@@ -13,7 +13,7 @@ import (
 
 func main() {
 	display := flag.String("display", "tui", "where to show the display: tui (this terminal) or window")
-	quirkList := flag.String("quirks", "", "comma separated presets (none, vip, schip, octo) and quirks\n(shift, load-store, vf-reset, jump, wrap, vblank) to turn on, starting from the default")
+	quirkList := flag.String("quirks", "", "comma separated presets (octo, vip, schip) and quirks\n(shift, load-store, vf-reset, jump-v0, wrap, vblank) to turn on, starting from the default")
 	speedValue := flag.String("speed", "", "opcodes run per frame")
 	flag.Usage = func() {
 		out := flag.CommandLine.Output()

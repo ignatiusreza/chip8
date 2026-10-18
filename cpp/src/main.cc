@@ -52,7 +52,7 @@ static bool parseMode(const std::string &value, DisplayMode &mode) {
 static bool parseQuirks(const std::string &value, Quirks &quirks) {
   std::string unknown;
   if(!quirks.parse(value, unknown)) {
-    std::cout << "unknown quirk \"" << unknown << "\", expected none, vip, schip, octo, shift, load-store, vf-reset, jump, wrap or vblank" << std::endl;
+    std::cout << "unknown quirk \"" << unknown << "\", expected octo, vip, schip, shift, load-store, vf-reset, jump-v0, wrap or vblank" << std::endl;
     return false;
   }
   return true;
@@ -70,8 +70,8 @@ static void usage(const char *program) {
   std::cout << "Usage : " << program << " [--display tui|window] [--quirks LIST] [--speed N] ROMNAME\n\n"
             << "  --display tui     draw in this terminal" << (DEFAULT_MODE == DisplayMode::Terminal ? " (default)" : "") << "\n"
             << "  --display window  open a separate window" << (DEFAULT_MODE == DisplayMode::Window ? " (default)" : "") << "\n"
-            << "  --quirks LIST     comma separated presets (none, vip, schip, octo) and quirks\n"
-            << "                    (shift, load-store, vf-reset, jump, wrap, vblank) to turn on,\n"
+            << "  --quirks LIST     comma separated presets (octo, vip, schip) and quirks\n"
+            << "                    (shift, load-store, vf-reset, jump-v0, wrap, vblank) to turn on,\n"
             << "                    starting from the default\n"
             << "  --speed N         opcodes run per frame\n\n"
             << "Without --quirks or --speed, they are read from the ROM's .cfg file if it has one,\n"

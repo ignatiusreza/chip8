@@ -66,14 +66,13 @@ bool Quirks::parse(const std::string &list, std::string &unknown) {
   std::istringstream names(list);
   std::string name;
   while(std::getline(names, name, ',')) {
-    if(name == "none") *this = Quirks();
-    else if(name == "vip") { *this = Quirks(); shift = loadStore = vfReset = vblank = true; }
-    else if(name == "schip") { *this = Quirks(); jump = true; }
-    else if(name == "octo") { *this = Quirks(); shift = loadStore = wrap = true; }
+    if(name == "octo") { *this = Quirks(); shift = loadStore = wrap = jumpV0 = true; }
+    else if(name == "vip") { *this = Quirks(); shift = loadStore = vfReset = vblank = jumpV0 = true; }
+    else if(name == "schip") *this = Quirks();
     else if(name == "shift") shift = true;
     else if(name == "load-store") loadStore = true;
     else if(name == "vf-reset") vfReset = true;
-    else if(name == "jump") jump = true;
+    else if(name == "jump-v0") jumpV0 = true;
     else if(name == "wrap") wrap = true;
     else if(name == "vblank") vblank = true;
     else {
@@ -329,8 +328,8 @@ void CPU::step() {
       I = NNN;
       PC += 2;
       break;
-    case 0xB000: // BNNN (memory PC = NNN + V0), or BXNN (PC = XNN + VX) with the jump quirk
-      PC = (NNN + (_quirks.jump ? VX : V[0])) & (MEMORY_SIZE - 1);
+    case 0xB000: // BXNN (PC = XNN + VX), or BNNN (PC = NNN + V0) with the jump-v0 quirk
+      PC = (NNN + (_quirks.jumpV0 ? V[0] : VX)) & (MEMORY_SIZE - 1);
       break;
     case 0xC000: // CXNN	(VX = random() & NN)
       VX = rand() & NN;

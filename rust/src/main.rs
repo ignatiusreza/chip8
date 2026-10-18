@@ -6,8 +6,8 @@ const USAGE: &str = "Usage : {} [--display tui|window] [--quirks LIST] [--speed 
 
   --display tui     draw in this terminal (default)
   --display window  open a separate window
-  --quirks LIST     comma separated presets (none, vip, schip, octo) and quirks
-                    (shift, load-store, vf-reset, jump, wrap, vblank) to turn on,
+  --quirks LIST     comma separated presets (octo, vip, schip) and quirks
+                    (shift, load-store, vf-reset, jump-v0, wrap, vblank) to turn on,
                     starting from the default
   --speed N         opcodes run per frame
 

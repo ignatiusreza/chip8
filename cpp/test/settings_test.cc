@@ -19,11 +19,11 @@ TEST(SettingsTest, QuirksStartFromTheDefault) {
   std::string error;
   ASSERT_TRUE(parseRomSettings("quirks = vf-reset\n", settings, error)) << error;
   EXPECT_TRUE(settings.quirks->shift && settings.quirks->loadStore && settings.quirks->wrap);
-  EXPECT_TRUE(settings.quirks->vfReset);
+  EXPECT_TRUE(settings.quirks->jumpV0 && settings.quirks->vfReset);
 
-  ASSERT_TRUE(parseRomSettings("quirks = none,jump\n", settings, error)) << error;
-  EXPECT_FALSE(settings.quirks->shift || settings.quirks->wrap);
-  EXPECT_TRUE(settings.quirks->jump);
+  ASSERT_TRUE(parseRomSettings("quirks = schip,shift\n", settings, error)) << error;
+  EXPECT_FALSE(settings.quirks->loadStore || settings.quirks->wrap || settings.quirks->jumpV0);
+  EXPECT_TRUE(settings.quirks->shift);
 }
 
 TEST(SettingsTest, LeavesMissingSettingsUnset) {

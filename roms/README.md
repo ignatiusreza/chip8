@@ -44,7 +44,7 @@ and speed it was made for. The table shows them, with `-` for the default.
 | `octogon.ch8` | Super Octogon | JohnEarnest | SUPER-CHIP | schip | 200 | Eight fantastic sides, and eight awesome angles |
 | `superpong.ch8` | Super Pong | offstatic | CHIP-8 | - | 30 | A fast pong-like |
 | `sweetcopter.ch8` | Sw8 Copter | JohnEarnest | SUPER-CHIP | - | 100 | An adaptation of "Swing Copters" for the Super Chip8 |
-| `binding.ch8` | The Binding of COSMAC | buffi | SUPER-CHIP | none,shift,load-store | 1000 | Simplified Isaac demake for SCHIP |
+| `binding.ch8` | The Binding of COSMAC | buffi | SUPER-CHIP | schip,shift,load-store,jump-v0 | 1000 | Simplified Isaac demake for SCHIP |
 | `tick.ch8` | Tick | StanislavDidus | CHIP-8 | vf-reset | 12 | Rhythm one button game for Chip-8 |
 | `wdl.ch8` | WDL | JohnEarnest | CHIP-8 | vip | - | That word game, but shorter |
 

@@ -97,10 +97,11 @@ mod tests {
     #[test]
     fn quirks_start_from_the_default() {
         let quirks = parse("quirks = vf-reset\n").unwrap().quirks.unwrap();
-        assert!(quirks.shift && quirks.load_store && quirks.wrap && quirks.vf_reset);
+        assert!(quirks.shift && quirks.load_store && quirks.wrap && quirks.jump_v0);
+        assert!(quirks.vf_reset);
 
-        let quirks = parse("quirks = none,jump\n").unwrap().quirks.unwrap();
-        assert!(!quirks.shift && !quirks.wrap && quirks.jump);
+        let quirks = parse("quirks = schip,shift\n").unwrap().quirks.unwrap();
+        assert!(!quirks.load_store && !quirks.wrap && !quirks.jump_v0 && quirks.shift);
     }
 
     #[test]
