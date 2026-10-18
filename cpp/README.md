@@ -37,9 +37,9 @@ builds it; for SDL3 on linux that needs its
 [build dependencies](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies).
 
 The terminal display is drawn as 64x16 half-block characters (braille in the SUPER-CHIP high
-resolution) inside a border, which needs a terminal of at least 66x19. Terminals only report key presses (repeated while held), not releases,
-so a key counts as held for 200ms after its last press. It needs a POSIX terminal, so on Windows the
-window is the default.
+resolution) inside a border, which needs a terminal of at least 66x19. Terminals only report key
+presses (repeated while held), not releases, so a key counts as held for 200ms after its last
+press. It needs a POSIX terminal, so on Windows the window is the default.
 
 In the window, keys are matched by their position on the keyboard, so the
 [keypad layout](../README.md#keyboard) is the same on non-QWERTY keyboards. If no audio device is
@@ -54,7 +54,9 @@ The code is split in two, like the Rust and Go ports:
   library. It has no SDL dependency, so it can be unit tested on its own.
 - `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
   screen is either the `Terminal`, or a `Window` made of the SDL `Graphic` and `Input` classes.
-  `src/main.cc` just parses the options, reads the ROM and runs the `Emulator` loop.
+  `settings.cc` reads a ROM's settings file, without SDL.
+  `src/main.cc` just parses the options, reads the ROM and its settings, and runs the `Emulator`
+  loop.
 
-The tests in `test/` cover the stack and the CPU's opcodes; the opcode tests are ported from the
-Rust and Go versions, so all three emulators are checked against the same behaviour.
+The tests in `test/` cover the stack, the CPU's opcodes and quirks, and the settings files. They
+match the Rust and Go tests, so all three emulators are checked against the same behaviour.
