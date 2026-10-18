@@ -18,7 +18,7 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 | Terminal layout | `cpp/src/frontend/layout.cc` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
 | Command line options | `cpp/src/frontend/options.cc` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |
-| Emulator loop | `cpp/src/frontend/emulator.cc` | `rust/src/frontend/mod.rs` | `go/frontend/emulator.go` |
+| Emulator loop | `cpp/src/frontend/emulator.cc` | `rust/src/frontend/emulator.rs` | `go/frontend/emulator.go` |
 
 - The tests are ports of each other, with the same names in each language's style
   (`CPUTest.WaitForKey`, `wait_for_key`, `TestWaitForKey`). When adding or changing a test,
