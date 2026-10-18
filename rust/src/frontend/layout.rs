@@ -39,26 +39,28 @@ pub struct Layout {
 
 impl Layout {
     /// Places the game, as large as possible while how to play still fits next to or
-    /// below it, and centres them in a columns x rows terminal.
+    /// below it, and centres them in a columns x rows terminal. How to play goes beside
+    /// the game in a terminal wider than it is tall, and below it otherwise, unless only
+    /// the other fits.
     pub fn new(columns: usize, rows: usize, settings: &RomSettings) -> Self {
         let has_panel = !how_to_play(settings, PANEL_MAX_WIDTH).is_empty();
+        // characters are about twice as tall as they are wide
+        let wide = columns > rows * 2;
         for scale in [2, 1] {
             if !has_panel {
                 break;
             }
             let (gw, gh) = (game_columns(scale), game_rows(scale));
-            if columns >= gw + PANEL_GAP + PANEL_MIN_WIDTH && rows >= gh {
+            let besides_fits = columns >= gw + PANEL_GAP + PANEL_MIN_WIDTH && rows >= gh;
+            let below_panel = how_to_play(settings, gw - 2);
+            let below_fits = columns >= gw && rows >= gh + 1 + below_panel.len();
+            if besides_fits && (wide || !below_fits) {
                 let width = PANEL_MAX_WIDTH.min(columns - gw - PANEL_GAP);
-                return besides(
-                    columns,
-                    rows,
-                    scale,
-                    truncate(how_to_play(settings, width), rows),
-                );
+                let panel = truncate(how_to_play(settings, width), rows);
+                return besides(columns, rows, scale, panel);
             }
-            let panel = how_to_play(settings, gw - 2);
-            if columns >= gw && rows >= gh + 1 + panel.len() {
-                return below(columns, rows, scale, panel);
+            if below_fits {
+                return below(columns, rows, scale, below_panel);
             }
         }
         // below the normal size game, as much of how to play as fits
@@ -260,9 +262,12 @@ mod tests {
         for (columns, rows, scale, besides) in [
             (200, 50, 2, true),  // 130 + 3 + 24 columns fit beside the large game
             (140, 60, 2, false), // the large game is too wide to fit it beside, but it fits below
-            (100, 30, 1, true),  // too small for the large game, so the normal one with it beside
-            (70, 40, 1, false),  // too narrow to put it beside, so below
-            (66, 22, 1, false),  // below, cut short
+            (160, 85, 2, false), // it fits either way, and the terminal is taller than wide, so below
+            (140, 40, 1, true),  // too small for the large game, so the normal one with it beside
+            (120, 68, 1, false), // it fits either way, and the terminal is taller than wide, so below
+            (100, 30, 1, true), // it fits either way, and the terminal is wider than tall, so beside
+            (70, 40, 1, false), // too narrow to put it beside, so below
+            (66, 22, 1, false), // below, cut short
         ] {
             let l = Layout::new(columns, rows, &br8kout());
             assert!(l.fits, "{columns}x{rows}");

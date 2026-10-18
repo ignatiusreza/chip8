@@ -98,15 +98,19 @@ static Layout below(int columns, int rows, int scale, std::vector<std::string> p
 
 Layout layoutTerminal(int columns, int rows, const RomSettings &settings) {
   bool hasPanel = !howToPlay(settings, PANEL_MAX_WIDTH).empty();
+  // characters are about twice as tall as they are wide
+  bool wide = columns > rows * 2;
   for(int scale : {2, 1}) {
     if(!hasPanel) break;
     int gw = gameColumns(scale), gh = gameRows(scale);
-    if(columns >= gw + PANEL_GAP + PANEL_MIN_WIDTH && rows >= gh) {
+    bool besidesFits = columns >= gw + PANEL_GAP + PANEL_MIN_WIDTH && rows >= gh;
+    std::vector<std::string> belowPanel = howToPlay(settings, gw - 2);
+    bool belowFits = columns >= gw && rows >= gh + 1 + int(belowPanel.size());
+    if(besidesFits && (wide || !belowFits)) {
       int width = std::min(PANEL_MAX_WIDTH, columns - gw - PANEL_GAP);
       return besides(columns, rows, scale, truncate(howToPlay(settings, width), rows));
     }
-    std::vector<std::string> panel = howToPlay(settings, gw - 2);
-    if(columns >= gw && rows >= gh + 1 + int(panel.size())) return below(columns, rows, scale, panel);
+    if(belowFits) return below(columns, rows, scale, belowPanel);
   }
   // below the normal size game, as much of how to play as fits
   int gh = gameRows(1);

@@ -12,8 +12,9 @@ All three draw in the terminal they are started from by default, and can open a 
 window instead with `--display window`.
 
 In the terminal, the game is centred, with the ROM's [how to play](#rom-settings) and the
-[quirks](#quirks) and [speed](#speed) it runs with next to it, or below it when the terminal is
-too narrow. A terminal of at least 130x35 shows the game at double
+[quirks](#quirks) and [speed](#speed) it runs with next to it in a terminal wider than it is tall
+(counting a character as twice as tall as it is wide), or below it in a taller one, unless only
+the other fits. A terminal of at least 130x35 shows the game at double
 size: 128x32 characters, each showing 1x2 high resolution pixels as a half block. Smaller ones
 show it as 64x16 characters, each showing 2x2 low resolution pixels as half blocks, or 2x4 high
 resolution pixels as a braille character; that needs at least 66x19. The layout follows the

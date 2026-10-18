@@ -34,20 +34,27 @@ type layout struct {
 }
 
 // layoutTerminal places the game, as large as possible while how to play still fits next
-// to or below it, and centres them in a columns x rows terminal.
+// to or below it, and centres them in a columns x rows terminal. How to play goes beside
+// the game in a terminal wider than it is tall, and below it otherwise, unless only the
+// other fits.
 func layoutTerminal(columns, rows int, settings RomSettings) layout {
 	hasPanel := len(howToPlay(settings, panelMaxWidth)) > 0
+	// characters are about twice as tall as they are wide
+	wide := columns > rows*2
 	for _, scale := range []int{2, 1} {
 		if !hasPanel {
 			break
 		}
 		gw, gh := gameColumns(scale), gameRows(scale)
-		if columns >= gw+panelGap+panelMinWidth && rows >= gh {
+		besidesFits := columns >= gw+panelGap+panelMinWidth && rows >= gh
+		belowPanel := howToPlay(settings, gw-2)
+		belowFits := columns >= gw && rows >= gh+1+len(belowPanel)
+		if besidesFits && (wide || !belowFits) {
 			panel := howToPlay(settings, min(panelMaxWidth, columns-gw-panelGap))
 			return besides(columns, rows, scale, truncate(panel, rows))
 		}
-		if panel := howToPlay(settings, gw-2); columns >= gw && rows >= gh+1+len(panel) {
-			return below(columns, rows, scale, panel)
+		if belowFits {
+			return below(columns, rows, scale, belowPanel)
 		}
 	}
 	// below the normal size game, as much of how to play as fits

@@ -23,7 +23,8 @@ struct Layout {
 };
 
 // places the game, as large as possible while how to play still fits next to or below it,
-// and centres them in a columns x rows terminal
+// and centres them in a columns x rows terminal. How to play goes beside the game in a
+// terminal wider than it is tall, and below it otherwise, unless only the other fits.
 Layout layoutTerminal(int columns, int rows, const RomSettings &settings);
 
 // the ROM's title, author, about, controls, and the quirks and speed it runs with, as

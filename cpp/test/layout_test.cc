@@ -63,7 +63,10 @@ TEST(LayoutTest, PicksTheLargestGameThatFitsWithHowToPlay) {
   for(const Case &c : std::vector<Case>{
         {200, 50, 2, true},  // 130 + 3 + 24 columns fit beside the large game
         {140, 60, 2, false}, // the large game is too wide to fit it beside, but it fits below
-        {100, 30, 1, true},  // too small for the large game, so the normal one with it beside
+        {160, 85, 2, false}, // it fits either way, and the terminal is taller than wide, so below
+        {140, 40, 1, true},  // too small for the large game, so the normal one with it beside
+        {120, 68, 1, false}, // it fits either way, and the terminal is taller than wide, so below
+        {100, 30, 1, true},  // it fits either way, and the terminal is wider than tall, so beside
         {70, 40, 1, false},  // too narrow to put it beside, so below
         {66, 22, 1, false},  // below, cut short
       }) {
