@@ -25,7 +25,13 @@ is played, with its how to play next to it. The player's page sends each new pic
 (1KB, only when it changes) to the server, which keeps the latest one for people who
 join late and forwards it to everyone watching; the player sees how many are watching.
 Viewers send nothing. A shared game carries on after a reload or a dropped connection,
-for 30 seconds, then ends. The protocol is described in
+for 30 seconds, then ends.
+
+Embedded in another page, the player asks it where it is (`postMessage` of
+`{"type":"chip8-ready"}`, answered with `{"type":"chip8-host","url"}`), and then shares
+`<that page>?watch=<id>` instead, for the page to open in its frame as `/watch/<id>`; the
+[blog](https://erauqssidlroweht.com/projects/chip8) does this. It also posts
+`{"type":"chip8-height","height"}` as its height changes, so the page can fit the frame to it. The protocol is described in
 [`server/src/relay.rs`](server/src/relay.rs).
 
 Running it

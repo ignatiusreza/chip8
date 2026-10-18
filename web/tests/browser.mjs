@@ -82,5 +82,22 @@ const t0 = Date.now()
 await viewer.waitForFunction(() => document.getElementById('status').textContent.includes('no longer being shared'), null, { timeout: 45000 })
 check('the session ends after the player stops', true, `after ${Math.round((Date.now() - t0) / 1000)}s`)
 
+// embedded in another page, which says where it is, the share link opens the game there
+const blog = await page(await browser.newContext())
+await blog.setContent(`
+  <iframe id="game" src="${base}/?rom=br8kout" style="width:900px;height:700px"></iframe>
+  <script>
+    addEventListener('message', (event) => {
+      if (event.data?.type === 'chip8-ready') event.source.postMessage({ type: 'chip8-host', url: 'https://blog.example/projects/chip8?ignored=1' }, '*')
+    })
+  </script>`)
+const embedded = await (await blog.$('#game')).contentFrame()
+await embedded.waitForFunction(() => document.getElementById('panel').textContent.includes('Br8kout'))
+await embedded.click('#share')
+await embedded.waitForFunction(() => document.getElementById('url').value.includes('watch'))
+const embeddedUrl = await embedded.inputValue('#url')
+check('an embedded game shares a link to the page it is in', /^https:\/\/blog\.example\/projects\/chip8\?watch=[A-Za-z0-9]{8}$/.test(embeddedUrl), embeddedUrl)
+await embedded.click('#share')
+
 check('no page errors', errors.length === 0, errors.join(' | '))
 await browser.close()

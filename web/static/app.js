@@ -22,6 +22,15 @@ const KEY_CODES = [
 const KEYPAD_ORDER = [1, 2, 3, 0xc, 4, 5, 6, 0xd, 7, 8, 9, 0xe, 0xa, 0, 0xb, 0xf]
 
 const $ = (id) => document.getElementById(id)
+
+// Embedded in another page, the page it is embedded in can say where it is, so share links
+// open the game there (as <page>?watch=<id>) rather than on its own (/watch/<id>).
+let host = null
+// called when the embedding page says where it is
+let onHost = () => {}
+function watchUrl(id) {
+  return host ? `${host}?watch=${encodeURIComponent(id)}` : `${location.origin}/watch/${id}`
+}
 const canvas = $('screen')
 const context = canvas.getContext('2d')
 const image = context.createImageData(FRAME_WIDTH, FRAME_HEIGHT)
@@ -110,6 +119,7 @@ async function play(roms) {
   let rom = null
   let flags = 0
   const share = sharing()
+  onHost = () => share.refreshLink()
 
   async function start(name) {
     rom = roms.find((r) => r.name === name) ?? roms[0]
@@ -206,6 +216,7 @@ function keypad(setKey) {
 // token kept for this tab.
 function sharing() {
   let socket = null
+  let sessionId = null
   let rom = null
   let lastFrame = null
   let wanted = false
@@ -219,7 +230,8 @@ function sharing() {
       const message = JSON.parse(event.data)
       if (message.type === 'session') {
         sessionStorage.setItem('chip8-session', JSON.stringify({ id: message.id, token: message.token }))
-        $('url').value = `${location.origin}/watch/${message.id}`
+        $('url').value = watchUrl(message.id)
+        sessionId = message.id
         $('link').hidden = false
         $('share').textContent = 'Stop sharing'
         setStatus('Sharing: anyone with the link can watch')
@@ -279,6 +291,10 @@ function sharing() {
     hello(next) {
       rom = next
       send(JSON.stringify({ type: 'hello', rom: rom.name, quirks: rom.quirks, speed: rom.speed }))
+    },
+    // the link changes when the embedding page says where it is
+    refreshLink() {
+      if (sessionId) $('url').value = watchUrl(sessionId)
     },
     frame(flags, frame) {
       const message = new Uint8Array(1 + FRAME_BYTES)
@@ -342,6 +358,20 @@ function ended(rom) {
 // Embedded in another page, such as the blog, tell it how tall the page is, so it can
 // size the frame to fit instead of scrolling inside it.
 if (window.parent !== window) {
+  // the embedding page answers chip8-ready with chip8-host and its address
+  addEventListener('message', (event) => {
+    if (event.source !== window.parent || event.data?.type !== 'chip8-host') return
+    try {
+      const url = new URL(event.data.url)
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') return
+      host = url.origin + url.pathname
+      onHost()
+    } catch {
+      // not a URL: keep the game's own links
+    }
+  })
+  window.parent.postMessage({ type: 'chip8-ready' }, '*')
+
   const main = document.querySelector('main')
   new ResizeObserver(() => {
     window.parent.postMessage({ type: 'chip8-height', height: Math.ceil(main.getBoundingClientRect().height) }, '*')
