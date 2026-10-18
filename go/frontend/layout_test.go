@@ -5,10 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ignatiusreza/chip8/go/chip8/settings"
+	"github.com/ignatiusreza/chip8/go/chip8"
 )
 
-var br8kout = settings.RomSettings{
+var br8kout = chip8.RomSettings{
 	Title:    "Br8kout",
 	Author:   "SharpenedSpoon",
 	About:    []string{"Breakout: bounce the ball off your paddle to break all the bricks."},
@@ -31,14 +31,14 @@ func TestHowToPlay(t *testing.T) {
 	if got := howToPlay(br8kout, 30); !slices.Equal(got, want) {
 		t.Errorf("howToPlay() =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-	if got := howToPlay(settings.RomSettings{}, 30); got != nil {
+	if got := howToPlay(chip8.RomSettings{}, 30); got != nil {
 		t.Errorf("howToPlay() of no settings = %q, want none", got)
 	}
 }
 
 func TestHowToPlayShowsQuirksAndSpeed(t *testing.T) {
 	howTo := br8kout
-	quirks, _ := settings.ParseQuirks("vf-reset")
+	quirks, _ := chip8.DefaultQuirks.Apply("vf-reset")
 	speed := 7
 	howTo.Quirks, howTo.Speed = &quirks, &speed
 	lines := howToPlay(howTo, 40)
@@ -85,7 +85,7 @@ func TestLayoutPicksTheLargestGameThatFitsWithHowToPlay(t *testing.T) {
 
 func TestLayoutCentres(t *testing.T) {
 	// the normal size game alone, 66x19, in the middle of 100x29
-	l := layoutTerminal(100, 29, settings.RomSettings{})
+	l := layoutTerminal(100, 29, chip8.RomSettings{})
 	if l.scale != 1 || l.gameX != 17 || l.gameY != 5 || l.panel != nil {
 		t.Errorf("layout = %+v, want the normal size game at (17, 5)", l)
 	}
@@ -101,7 +101,7 @@ func TestLayoutTooSmall(t *testing.T) {
 	if l := layoutTerminal(65, 40, br8kout); l.fits {
 		t.Errorf("layout = %+v, want it not to fit", l)
 	}
-	if l := layoutTerminal(66, 18, settings.RomSettings{}); l.fits {
+	if l := layoutTerminal(66, 18, chip8.RomSettings{}); l.fits {
 		t.Errorf("layout = %+v, want it not to fit", l)
 	}
 }

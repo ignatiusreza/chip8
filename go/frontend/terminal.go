@@ -10,7 +10,6 @@ import (
 	"golang.org/x/term"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
-	"github.com/ignatiusreza/chip8/go/chip8/settings"
 )
 
 // Terminals only send key presses, repeated while the key is held. Without release
@@ -33,7 +32,7 @@ const termKeymap = "x123qweasdzc4rfv"
 // and the ROM's how to play, centred.
 type terminal struct {
 	title     string
-	howTo     settings.RomSettings
+	howTo     chip8.RomSettings
 	input     chan []byte
 	lastPress [16]time.Time
 	quit      bool
@@ -44,7 +43,7 @@ type terminal struct {
 
 // runTerminal switches the terminal to raw mode and an alternate screen, and runs the
 // emulator at 60 ticks per second until Esc is pressed.
-func runTerminal(e *Emulator, title string, howTo settings.RomSettings) error {
+func runTerminal(e *Emulator, title string, howTo chip8.RomSettings) error {
 	in, out := int(os.Stdin.Fd()), int(os.Stdout.Fd())
 	if !term.IsTerminal(in) || !term.IsTerminal(out) {
 		return errors.New("the terminal display needs an interactive terminal, try -display window")

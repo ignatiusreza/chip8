@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
-	"github.com/ignatiusreza/chip8/go/chip8/settings"
 )
 
 // The terminal shows the game as a title line above a bordered box of character cells,
@@ -38,7 +37,7 @@ type layout struct {
 // to or below it, and centres them in a columns x rows terminal. How to play goes beside
 // the game in a terminal wider than it is tall, and below it otherwise, unless only the
 // other fits.
-func layoutTerminal(columns, rows int, howTo settings.RomSettings) layout {
+func layoutTerminal(columns, rows int, howTo chip8.RomSettings) layout {
 	hasPanel := len(howToPlay(howTo, panelMaxWidth)) > 0
 	// characters are about twice as tall as they are wide
 	wide := columns > rows*2
@@ -90,7 +89,7 @@ func below(columns, rows, scale int, panel []string) layout {
 
 // howToPlay lays out the ROM's title, author, about, controls, and the quirks and speed it
 // runs with, as lines of at most width characters, with blank lines between them.
-func howToPlay(howTo settings.RomSettings, width int) []string {
+func howToPlay(howTo chip8.RomSettings, width int) []string {
 	var lines []string
 	section := func(texts []string, indent int) {
 		if len(texts) == 0 {

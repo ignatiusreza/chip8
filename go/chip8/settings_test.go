@@ -1,4 +1,4 @@
-package settings
+package chip8
 
 import (
 	"slices"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestParsesQuirksAndSpeed(t *testing.T) {
-	settings, err := Parse("# Some Game\n\n  quirks = vip,wrap \r\nspeed=200\n")
+	settings, err := ParseRomSettings("# Some Game\n\n  quirks = vip,wrap \r\nspeed=200\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestParsesQuirksAndSpeed(t *testing.T) {
 }
 
 func TestQuirksStartFromTheDefault(t *testing.T) {
-	settings, err := Parse("quirks = vf-reset\n")
+	settings, err := ParseRomSettings("quirks = vf-reset\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestQuirksStartFromTheDefault(t *testing.T) {
 		t.Errorf("Quirks = %+v, want octo and vf-reset", q)
 	}
 
-	settings, err = Parse("quirks = schip,shift\n")
+	settings, err = ParseRomSettings("quirks = schip,shift\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestQuirksStartFromTheDefault(t *testing.T) {
 }
 
 func TestLeavesMissingSettingsUnset(t *testing.T) {
-	settings, err := Parse("speed = 7\n")
+	settings, err := ParseRomSettings("speed = 7\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,14 +58,14 @@ func TestRejectsInvalidSettings(t *testing.T) {
 		"speed\n":                       `line 1: expected "name = value"`,
 		"speed = 0\n":                   "line 1: speed must be a number from 1 to 10000",
 	} {
-		if _, err := Parse(text); err == nil || !strings.HasPrefix(err.Error(), want) {
-			t.Errorf("Parse(%q) error = %v, want %q", text, err, want)
+		if _, err := ParseRomSettings(text); err == nil || !strings.HasPrefix(err.Error(), want) {
+			t.Errorf("ParseRomSettings(%q) error = %v, want %q", text, err, want)
 		}
 	}
 }
 
 func TestParsesHowToPlay(t *testing.T) {
-	settings, err := Parse("title = Br8kout\nauthor = SharpenedSpoon\n" +
+	settings, err := ParseRomSettings("title = Br8kout\nauthor = SharpenedSpoon\n" +
 		"about = Break the bricks.\nabout = Don't miss the ball.\n" +
 		"controls = A / D: move left / right\ncontrols = E: serve\n")
 	if err != nil {
@@ -91,8 +91,8 @@ func TestPathReplacesTheExtension(t *testing.T) {
 		"roms/pong":        "roms/pong.cfg",
 		"my.roms/pong":     "my.roms/pong.cfg",
 	} {
-		if got := Path(rom); got != want {
-			t.Errorf("Path(%q) = %q, want %q", rom, got, want)
+		if got := RomSettingsPath(rom); got != want {
+			t.Errorf("RomSettingsPath(%q) = %q, want %q", rom, got, want)
 		}
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
-	"github.com/ignatiusreza/chip8/go/chip8/settings"
 )
 
 // Mode is where the display is shown and the keyboard read from.
@@ -38,7 +37,7 @@ type Options struct {
 	Quirks chip8.Quirks
 	Speed  int
 	// the ROM's settings file, with those quirks and speed, for the terminal to show
-	Settings settings.RomSettings
+	Settings chip8.RomSettings
 }
 
 // ParseOptions parses the command line (args starting with the program name), then reads
@@ -54,7 +53,7 @@ func ParseOptions(args []string) (*Options, error) {
 		out := flags.Output()
 		fmt.Fprintf(out, "Usage : %s [-display tui|window] [-quirks LIST] [-speed N] ROMNAME\n\n", args[0])
 		flags.PrintDefaults()
-		fmt.Fprintf(out, "\nWithout -quirks or -speed, they are read from the ROM's .cfg file if it has one,\notherwise they default to %s and %d.\n", settings.DefaultQuirks, settings.DefaultSpeed)
+		fmt.Fprintf(out, "\nWithout -quirks or -speed, they are read from the ROM's .cfg file if it has one,\notherwise they default to %s and %d.\n", chip8.DefaultQuirks, chip8.DefaultSpeed)
 	}
 	flags.Parse(args[1:])
 	if flags.NArg() < 1 {
@@ -73,22 +72,22 @@ func ParseOptions(args []string) (*Options, error) {
 	}
 
 	// the command line wins over the ROM's settings file, which wins over the defaults
-	romSettings, err := settings.Load(path)
+	romSettings, err := chip8.LoadRomSettings(path)
 	if err != nil {
 		return nil, err
 	}
-	quirks, err := settings.ParseQuirks(settings.DefaultQuirks)
+	quirks := chip8.DefaultQuirks
 	if *quirkList != "" {
-		quirks, err = settings.ParseQuirks(*quirkList)
+		quirks, err = chip8.DefaultQuirks.Apply(*quirkList)
 	} else if romSettings.Quirks != nil {
 		quirks = *romSettings.Quirks
 	}
 	if err != nil {
 		return nil, err
 	}
-	speed := settings.DefaultSpeed
+	speed := chip8.DefaultSpeed
 	if *speedValue != "" {
-		if speed, err = settings.ParseSpeed(*speedValue); err != nil {
+		if speed, err = chip8.ParseSpeed(*speedValue); err != nil {
 			return nil, fmt.Errorf("-%w", err)
 		}
 	} else if romSettings.Speed != nil {
