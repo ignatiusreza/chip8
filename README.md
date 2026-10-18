@@ -148,19 +148,19 @@ flowchart TB
     subgraph frontend["frontend/"]
         args["Args<br/>the parsed command line"]
         emulator["Emulator<br/>runs the frame loop"]
-        input["Input<br/>sends changed keys"]
         sound["Sound<br/>the beeper"]
+        input["Input<br/>sends changed keys"]
         screen["Screen<br/>keys() and draw()"]
-        terminal["Terminal"]
         window["Window"]
+        terminal["Terminal"]
         layout["layout<br/>places the game and how to play"]
     end
 
     subgraph core["chip8/"]
-        rom["Rom + RomSettings<br/>the .ch8 file and its .cfg"]
         cpu["CPU + Quirks"]
-        display["Display"]
+        rom["Rom + RomSettings<br/>the .ch8 file and its .cfg"]
         keypad["Keypad"]
+        display["Display"]
     end
 
     main -->|parses| args
@@ -170,13 +170,13 @@ flowchart TB
     emulator --> input
     emulator --> sound
     emulator --> screen
-    terminal -.->|is a| screen
     window -.->|is a| screen
+    terminal -.->|is a| screen
     terminal --> layout
     input -->|set_key| cpu
     screen -->|draws| display
-    cpu --> display
     cpu --> keypad
+    cpu --> display
 ```
 
 The `Emulator` loads the `Rom`, and runs it with the quirks and speed given on the command
