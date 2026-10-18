@@ -17,7 +17,7 @@ static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode 
 Emulator::Emulator(const Args &args) {
   Rom rom;
   std::string error;
-  if(!loadRom(args.romPath, rom, error)) throw std::runtime_error(error);
+  if(!Rom::load(args.romPath, rom, error)) throw std::runtime_error(error);
   // the command line wins over the ROM's settings file, which wins over the defaults
   RomSettings &howTo = rom.settings;
   Quirks quirks = args.quirks.value_or(howTo.quirks.value_or(defaultQuirks()));

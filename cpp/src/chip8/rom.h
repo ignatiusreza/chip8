@@ -34,6 +34,10 @@ struct RomSettings {
   std::string author;
   std::vector<std::string> about;
   std::vector<std::string> controls;
+
+  // reads the settings file for the ROM at `romPath`, leaving `settings` empty if there is
+  // none; returns false and sets `error` if it can't be read or is invalid
+  static bool load(const std::string &romPath, RomSettings &settings, std::string &error);
 };
 
 // parses an opcodes per frame count, between 1 and MAX_SPEED
@@ -45,18 +49,14 @@ bool parseRomSettings(const std::string &text, RomSettings &settings, std::strin
 // the path of the settings file for the ROM at `romPath`
 std::string romSettingsPath(const std::string &romPath);
 
-// reads the settings file for the ROM at `romPath`, leaving `settings` empty if there is
-// none; returns false and sets `error` if it can't be read or is invalid
-bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error);
-
 // A ROM read from a file, with its settings.
 struct Rom {
   std::vector<unsigned char> data; // the program, loaded into memory at 0x200
   RomSettings settings;
-};
 
-// reads the ROM at `path`, and its settings file if it has one; returns false and sets
-// `error` if either can't be read, or the settings are invalid
-bool loadRom(const std::string &path, Rom &rom, std::string &error);
+  // reads the ROM at `path`, and its settings file if it has one; returns false and sets
+  // `error` if either can't be read, or the settings are invalid
+  static bool load(const std::string &path, Rom &rom, std::string &error);
+};
 
 #endif	/* _CHIP8_CHIP8_ROM_H */

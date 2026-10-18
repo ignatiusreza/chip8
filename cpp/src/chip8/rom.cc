@@ -78,7 +78,7 @@ std::string romSettingsPath(const std::string &romPath) {
   return romPath.substr(0, dot) + ".cfg";
 }
 
-bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error) {
+bool RomSettings::load(const std::string &romPath, RomSettings &settings, std::string &error) {
   std::string path = romSettingsPath(romPath);
   std::ifstream file(path);
   if(!file) return true; // the ROM runs with the defaults
@@ -92,7 +92,7 @@ bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::str
   return true;
 }
 
-bool loadRom(const std::string &path, Rom &rom, std::string &error) {
+bool Rom::load(const std::string &path, Rom &rom, std::string &error) {
   std::ifstream file(path, std::ios_base::binary | std::ios_base::in);
   if(!file) {
     error = "Could not read " + path;
@@ -103,5 +103,5 @@ bool loadRom(const std::string &path, Rom &rom, std::string &error) {
     error = "Error Reading ROM";
     return false;
   }
-  return loadRomSettings(path, rom.settings, error);
+  return RomSettings::load(path, rom.settings, error);
 }
