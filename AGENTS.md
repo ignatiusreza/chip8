@@ -12,7 +12,8 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 Each port lays its code out the same way: the core in a `chip8` directory (`cpp/src/chip8/`,
 `rust/src/chip8/`, `go/chip8/`), the frontend in `frontend/` beside it, and `main` next to
 them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths stay
-`chip8::Cpu`, `chip8::rom`.
+`chip8::Cpu`, `chip8::rom`. The top-level `README.md`'s Architecture section draws this structure
+and the frame loop as Mermaid diagrams; update them when either changes.
 
 | Concern | C++ | Rust | Go |
 |---|---|---|---|
