@@ -17,7 +17,7 @@ use super::input::Keys;
 use super::layout::{game_columns, game_rows, Layout};
 use super::screen::Screen;
 use super::Result;
-use chip8::settings::RomSettings;
+use chip8::RomSettings;
 
 const FRAME: Duration = Duration::from_nanos(1_000_000_000 / 60);
 

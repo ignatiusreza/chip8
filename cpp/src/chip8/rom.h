@@ -1,5 +1,5 @@
-#ifndef _CHIP8_CHIP8_SETTINGS_H
-#define	_CHIP8_CHIP8_SETTINGS_H
+#ifndef _CHIP8_CHIP8_ROM_H
+#define	_CHIP8_CHIP8_ROM_H
 
 #include <optional>
 #include <string>
@@ -49,4 +49,14 @@ std::string romSettingsPath(const std::string &romPath);
 // none; returns false and sets `error` if it can't be read or is invalid
 bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error);
 
-#endif	/* _CHIP8_CHIP8_SETTINGS_H */
+// A ROM read from a file, with its settings.
+struct Rom {
+  std::vector<unsigned char> data; // the program, loaded into memory at 0x200
+  RomSettings settings;
+};
+
+// reads the ROM at `path`, and its settings file if it has one; returns false and sets
+// `error` if either can't be read, or the settings are invalid
+bool loadRom(const std::string &path, Rom &rom, std::string &error);
+
+#endif	/* _CHIP8_CHIP8_ROM_H */

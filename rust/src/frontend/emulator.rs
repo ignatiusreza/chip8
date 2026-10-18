@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use chip8::{settings, Cpu};
+use chip8::{rom, Cpu, Rom, RomSettings};
 
 use super::input::Input;
 use super::screen::Screen;
@@ -22,33 +22,31 @@ pub struct Emulator {
 impl Emulator {
     /// Loads the ROM and its settings file, then opens the audio device and the screen.
     pub fn new(args: &Args) -> Result<Self> {
-        let rom_path = &args.rom_path;
-        let rom = std::fs::read(rom_path).map_err(|e| format!("Could not read {rom_path}: {e}"))?;
+        let rom = Rom::load(Path::new(&args.rom_path))?;
         // the command line wins over the ROM's settings file, which wins over the defaults
-        let settings = settings::load(Path::new(rom_path))?;
         let quirks = args
             .quirks
-            .or(settings.quirks)
-            .unwrap_or_else(settings::default_quirks);
+            .or(rom.settings.quirks)
+            .unwrap_or_else(rom::default_quirks);
         let speed = args
             .speed
-            .or(settings.speed)
-            .unwrap_or(settings::DEFAULT_SPEED);
+            .or(rom.settings.speed)
+            .unwrap_or(rom::DEFAULT_SPEED);
 
         let mut cpu = Cpu::new();
         cpu.set_quirks(quirks);
-        cpu.load(&rom)?;
+        cpu.load(&rom.data)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
-        let title = format!("Chip 8 : {rom_path}");
+        let title = format!("Chip 8 : {}", args.rom_path);
         let screen: Box<dyn Screen> = match args.mode {
             // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
             DisplayMode::Terminal => Box::new(Terminal::new(
                 &title,
-                &settings::RomSettings {
+                &RomSettings {
                     quirks: Some(quirks),
                     speed: Some(speed),
-                    ..settings
+                    ..rom.settings
                 },
             )?),
             DisplayMode::Window => Box::new(Window::new(&title)?),

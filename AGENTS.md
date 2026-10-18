@@ -12,13 +12,13 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 Each port lays its code out the same way: the core in a `chip8` directory (`cpp/src/chip8/`,
 `rust/src/chip8/`, `go/chip8/`), the frontend in `frontend/` beside it, and `main` next to
 them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths stay
-`chip8::Cpu`, `chip8::settings`.
+`chip8::Cpu`, `chip8::rom`.
 
 | Concern | C++ | Rust | Go |
 |---|---|---|---|
 | CPU, opcodes, quirks | `cpp/src/chip8/cpu.{h,cc}` | `rust/src/chip8/cpu.rs` | `go/chip8/cpu.go` |
 | Display, keypad | `cpp/src/chip8/{display,keypad}.h` | `rust/src/chip8/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
-| ROM settings files | `cpp/src/chip8/settings.{h,cc}` | `rust/src/chip8/settings.rs` | `go/chip8/settings.go` |
+| ROM files and their settings files | `cpp/src/chip8/rom.{h,cc}` | `rust/src/chip8/rom.rs` | `go/chip8/rom.go` |
 | Terminal layout | `cpp/src/frontend/layout.{h,cc}` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
 | Command line arguments | `cpp/src/frontend/args.{h,cc}` | `rust/src/frontend/args.rs` | `go/frontend/args.go` |
@@ -42,8 +42,8 @@ them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths
   terminal supports the kitty keyboard protocol).
 - The arguments are `--display tui|window`, `--quirks LIST`, `--speed N` (single dash in
   Go), parsed into `Args` by the `args` module, which only parses (no file I/O). The
-  `Emulator` constructor reads the ROM and its `.cfg` settings file and picks the quirks and
-  speed: the command line wins over the settings file, which wins over the defaults (`octo`,
+  `Emulator` constructor loads the `Rom` (the program and its `.cfg` settings file, from the
+  core's `rom` module) and picks the quirks and speed: the command line wins over the settings file, which wins over the defaults (`octo`,
   15).
 - Keep each `main` compact: it only parses the `Args`, builds the `Emulator` from them and
   runs it. Parsing and usage text belong in the `args` module, and reading the ROM and

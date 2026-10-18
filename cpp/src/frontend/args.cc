@@ -1,7 +1,7 @@
 #include "args.h"
 
 #include <iostream>
-#include "../chip8/settings.h"
+#include "../chip8/rom.h"
 
 // Windows has no terminal display, so it defaults to the window
 #ifdef _WIN32

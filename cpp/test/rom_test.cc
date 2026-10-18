@@ -1,12 +1,12 @@
-// Settings file tests, matching the Go (go/frontend/settings_test.go) and Rust
-// (rust/src/frontend/settings.rs) versions.
+// ROM settings file tests, matching the Go (go/chip8/rom_test.go) and Rust
+// (rust/src/chip8/rom.rs) versions.
 
 #include <string>
 #include <vector>
 #include <gtest/gtest.h>
-#include "chip8/settings.h"
+#include "chip8/rom.h"
 
-TEST(SettingsTest, ParsesQuirksAndSpeed) {
+TEST(RomTest, ParsesQuirksAndSpeed) {
   RomSettings settings;
   std::string error;
   ASSERT_TRUE(parseRomSettings("# Some Game\n\n  quirks = vip,wrap \r\nspeed=200\n", settings, error)) << error;
@@ -15,7 +15,7 @@ TEST(SettingsTest, ParsesQuirksAndSpeed) {
   EXPECT_EQ(settings.speed, 200);
 }
 
-TEST(SettingsTest, QuirksStartFromTheDefault) {
+TEST(RomTest, QuirksStartFromTheDefault) {
   RomSettings settings;
   std::string error;
   ASSERT_TRUE(parseRomSettings("quirks = vf-reset\n", settings, error)) << error;
@@ -27,7 +27,7 @@ TEST(SettingsTest, QuirksStartFromTheDefault) {
   EXPECT_TRUE(settings.quirks->shift);
 }
 
-TEST(SettingsTest, LeavesMissingSettingsUnset) {
+TEST(RomTest, LeavesMissingSettingsUnset) {
   RomSettings settings;
   std::string error;
   ASSERT_TRUE(parseRomSettings("speed = 7\n", settings, error)) << error;
@@ -35,7 +35,7 @@ TEST(SettingsTest, LeavesMissingSettingsUnset) {
   EXPECT_EQ(settings.speed, 7);
 }
 
-TEST(SettingsTest, RejectsInvalidSettings) {
+TEST(RomTest, RejectsInvalidSettings) {
   RomSettings settings;
   std::string error;
   EXPECT_FALSE(parseRomSettings("quirks = octo\nspeed = fast\n", settings, error));
@@ -49,7 +49,7 @@ TEST(SettingsTest, RejectsInvalidSettings) {
   EXPECT_FALSE(parseRomSettings("speed = 0\n", settings, error));
 }
 
-TEST(SettingsTest, ParsesHowToPlay) {
+TEST(RomTest, ParsesHowToPlay) {
   RomSettings settings;
   std::string error;
   ASSERT_TRUE(parseRomSettings(
@@ -64,7 +64,7 @@ TEST(SettingsTest, ParsesHowToPlay) {
   EXPECT_FALSE(settings.speed.has_value());
 }
 
-TEST(SettingsTest, PathReplacesTheExtension) {
+TEST(RomTest, PathReplacesTheExtension) {
   EXPECT_EQ(romSettingsPath("roms/br8kout.ch8"), "roms/br8kout.cfg");
   EXPECT_EQ(romSettingsPath("roms/pong"), "roms/pong.cfg");
   EXPECT_EQ(romSettingsPath("my.roms/pong"), "my.roms/pong.cfg");

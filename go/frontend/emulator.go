@@ -2,12 +2,7 @@
 // keyboard and speaker.
 package frontend
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/ignatiusreza/chip8/go/chip8"
-)
+import "github.com/ignatiusreza/chip8/go/chip8"
 
 const tps = 60
 
@@ -26,15 +21,12 @@ type Emulator struct {
 
 // New loads the ROM and its settings file, and sets up the audio device.
 func New(args *Args) (*Emulator, error) {
-	rom, err := os.ReadFile(args.RomPath)
-	if err != nil {
-		return nil, fmt.Errorf("Could not read %s: %v", args.RomPath, err)
-	}
-	// the command line wins over the ROM's settings file, which wins over the defaults
-	howTo, err := chip8.LoadRomSettings(args.RomPath)
+	rom, err := chip8.LoadRom(args.RomPath)
 	if err != nil {
 		return nil, err
 	}
+	// the command line wins over the ROM's settings file, which wins over the defaults
+	howTo := rom.Settings
 	quirks, speed := chip8.DefaultQuirks, chip8.DefaultSpeed
 	if args.Quirks != nil {
 		quirks = *args.Quirks
@@ -50,7 +42,7 @@ func New(args *Args) (*Emulator, error) {
 
 	cpu := chip8.NewCPU()
 	cpu.SetQuirks(quirks)
-	if err := cpu.Load(rom); err != nil {
+	if err := cpu.Load(rom.Data); err != nil {
 		return nil, err
 	}
 	return &Emulator{

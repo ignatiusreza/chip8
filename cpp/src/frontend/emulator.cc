@@ -1,24 +1,12 @@
 #include "emulator.h"
 
 #include <chrono>
-#include <fstream>
-#include <iterator>
 #include <stdexcept>
 #include <thread>
-#include <vector>
 
-#include "../chip8/settings.h"
+#include "../chip8/rom.h"
 #include "terminal.h"
 #include "window.h"
-
-// reads the whole ROM file; throws std::runtime_error if it can't
-static std::vector<unsigned char> readRom(const std::string &path) {
-  std::ifstream file(path, std::ios_base::binary | std::ios_base::in);
-  if(!file) throw std::runtime_error("Could not read " + path);
-  std::vector<unsigned char> rom(std::istreambuf_iterator<char>(file), {});
-  if(file.bad()) throw std::runtime_error("Error Reading ROM");
-  return rom;
-}
 
 static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode mode,
                                           const RomSettings &howTo) {
@@ -27,11 +15,11 @@ static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode 
 }
 
 Emulator::Emulator(const Args &args) {
-  std::vector<unsigned char> rom = readRom(args.romPath);
-  // the command line wins over the ROM's settings file, which wins over the defaults
-  RomSettings howTo;
+  Rom rom;
   std::string error;
-  if(!loadRomSettings(args.romPath, howTo, error)) throw std::runtime_error(error);
+  if(!loadRom(args.romPath, rom, error)) throw std::runtime_error(error);
+  // the command line wins over the ROM's settings file, which wins over the defaults
+  RomSettings &howTo = rom.settings;
   Quirks quirks = args.quirks.value_or(howTo.quirks.value_or(defaultQuirks()));
   _speed = args.speed.value_or(howTo.speed.value_or(DEFAULT_SPEED));
   // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
@@ -39,7 +27,7 @@ Emulator::Emulator(const Args &args) {
   howTo.speed = _speed;
 
   _cpu.setQuirks(quirks);
-  if(!_cpu.load(rom.data(), rom.size())) {
+  if(!_cpu.load(rom.data.data(), rom.data.size())) {
     throw std::runtime_error("ROM is too large, at most " + std::to_string(CPU::MAX_ROM_SIZE) + " bytes fit in memory");
   }
   _sound.emplace();

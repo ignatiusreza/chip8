@@ -1,6 +1,7 @@
-#include "settings.h"
+#include "rom.h"
 
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 static std::string trim(const std::string &s) {
@@ -89,4 +90,18 @@ bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::str
     return false;
   }
   return true;
+}
+
+bool loadRom(const std::string &path, Rom &rom, std::string &error) {
+  std::ifstream file(path, std::ios_base::binary | std::ios_base::in);
+  if(!file) {
+    error = "Could not read " + path;
+    return false;
+  }
+  rom.data.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+  if(file.bad()) {
+    error = "Error Reading ROM";
+    return false;
+  }
+  return loadRomSettings(path, rom.settings, error);
 }

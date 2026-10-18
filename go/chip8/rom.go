@@ -113,3 +113,23 @@ func LoadRomSettings(romPath string) (RomSettings, error) {
 	}
 	return settings, nil
 }
+
+// Rom is a ROM read from a file, with its settings.
+type Rom struct {
+	// the program, loaded into memory at 0x200
+	Data     []byte
+	Settings RomSettings
+}
+
+// LoadRom reads the ROM at path, and its settings file if it has one.
+func LoadRom(path string) (*Rom, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read %s: %v", path, err)
+	}
+	settings, err := LoadRomSettings(path)
+	if err != nil {
+		return nil, err
+	}
+	return &Rom{Data: data, Settings: settings}, nil
+}

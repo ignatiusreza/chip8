@@ -1,5 +1,6 @@
-//! What a ROM needs to run well, and how to play it, read from the settings file next to
-//! it: the ROM's path with its extension replaced by ".cfg". Each line holds "name = value":
+//! A ROM file, and what it needs to run well and how to play it, read from the settings
+//! file next to it: the ROM's path with its extension replaced by ".cfg". Each line holds
+//! "name = value":
 //!
 //! - `quirks = LIST`: the same list as --quirks
 //! - `speed = N`: opcodes per frame
@@ -54,7 +55,7 @@ pub fn parse_speed(value: &str) -> Result<u32, String> {
 }
 
 /// Parses the text of a settings file.
-pub fn parse(text: &str) -> Result<RomSettings, String> {
+pub fn parse_settings(text: &str) -> Result<RomSettings, String> {
     let mut settings = RomSettings::default();
     for (number, line) in text.lines().enumerate() {
         let line = line.trim();
@@ -84,18 +85,38 @@ pub fn parse(text: &str) -> Result<RomSettings, String> {
 }
 
 /// The path of the settings file for the ROM at `rom_path`.
-pub fn path(rom_path: &Path) -> PathBuf {
+pub fn settings_path(rom_path: &Path) -> PathBuf {
     rom_path.with_extension("cfg")
 }
 
 /// Reads the settings file for the ROM at `rom_path`, if it has one.
-pub fn load(rom_path: &Path) -> Result<RomSettings, String> {
-    let path = path(rom_path);
+pub fn load_settings(rom_path: &Path) -> Result<RomSettings, String> {
+    let path = settings_path(rom_path);
     match std::fs::read_to_string(&path) {
-        Ok(text) => parse(&text).map_err(|e| format!("{}, {e}", path.display())),
+        Ok(text) => parse_settings(&text).map_err(|e| format!("{}, {e}", path.display())),
         // the ROM runs with the defaults
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(RomSettings::default()),
         Err(e) => Err(format!("Could not read {}: {e}", path.display())),
+    }
+}
+
+/// A ROM read from a file, with its settings.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Rom {
+    /// The program, loaded into memory at 0x200.
+    pub data: Vec<u8>,
+    pub settings: RomSettings,
+}
+
+impl Rom {
+    /// Reads the ROM at `path`, and its settings file if it has one.
+    pub fn load(path: &Path) -> Result<Rom, String> {
+        let data =
+            std::fs::read(path).map_err(|e| format!("Could not read {}: {e}", path.display()))?;
+        Ok(Rom {
+            data,
+            settings: load_settings(path)?,
+        })
     }
 }
 
@@ -105,7 +126,8 @@ mod tests {
 
     #[test]
     fn parses_quirks_and_speed() {
-        let settings = parse("# Some Game\n\n  quirks = vip,wrap \r\nspeed=200\n").unwrap();
+        let settings =
+            parse_settings("# Some Game\n\n  quirks = vip,wrap \r\nspeed=200\n").unwrap();
         let quirks = settings.quirks.unwrap();
         assert!(quirks.vblank && quirks.wrap);
         assert_eq!(settings.speed, Some(200));
@@ -113,17 +135,23 @@ mod tests {
 
     #[test]
     fn quirks_start_from_the_default() {
-        let quirks = parse("quirks = vf-reset\n").unwrap().quirks.unwrap();
+        let quirks = parse_settings("quirks = vf-reset\n")
+            .unwrap()
+            .quirks
+            .unwrap();
         assert!(quirks.shift && quirks.load_store && quirks.wrap && quirks.jump_v0);
         assert!(quirks.vf_reset);
 
-        let quirks = parse("quirks = schip,shift\n").unwrap().quirks.unwrap();
+        let quirks = parse_settings("quirks = schip,shift\n")
+            .unwrap()
+            .quirks
+            .unwrap();
         assert!(!quirks.load_store && !quirks.wrap && !quirks.jump_v0 && quirks.shift);
     }
 
     #[test]
     fn leaves_missing_settings_unset() {
-        let settings = parse("speed = 7\n").unwrap();
+        let settings = parse_settings("speed = 7\n").unwrap();
         assert_eq!(settings.quirks, None);
         assert_eq!(settings.speed, Some(7));
     }
@@ -131,26 +159,26 @@ mod tests {
     #[test]
     fn rejects_invalid_settings() {
         assert_eq!(
-            parse("quirks = octo\nspeed = fast\n").unwrap_err(),
+            parse_settings("quirks = octo\nspeed = fast\n").unwrap_err(),
             "line 2: speed must be a number from 1 to 10000"
         );
-        assert!(parse("quirks = bogus\n")
+        assert!(parse_settings("quirks = bogus\n")
             .unwrap_err()
             .starts_with("line 1: unknown quirk \"bogus\""));
         assert_eq!(
-            parse("colour = green\n").unwrap_err(),
+            parse_settings("colour = green\n").unwrap_err(),
             "line 1: unknown setting \"colour\", expected quirks, speed, title, author, about or controls"
         );
         assert_eq!(
-            parse("speed\n").unwrap_err(),
+            parse_settings("speed\n").unwrap_err(),
             "line 1: expected \"name = value\""
         );
-        assert!(parse("speed = 0\n").is_err());
+        assert!(parse_settings("speed = 0\n").is_err());
     }
 
     #[test]
     fn parses_how_to_play() {
-        let settings = parse(concat!(
+        let settings = parse_settings(concat!(
             "title = Br8kout\nauthor = SharpenedSpoon\n",
             "about = Break the bricks.\nabout = Don't miss the ball.\n",
             "controls = A / D: move left / right\ncontrols = E: serve\n",
@@ -169,12 +197,15 @@ mod tests {
     #[test]
     fn path_replaces_the_extension() {
         assert_eq!(
-            path(Path::new("roms/br8kout.ch8")),
+            settings_path(Path::new("roms/br8kout.ch8")),
             Path::new("roms/br8kout.cfg")
         );
-        assert_eq!(path(Path::new("roms/pong")), Path::new("roms/pong.cfg"));
         assert_eq!(
-            path(Path::new("my.roms/pong")),
+            settings_path(Path::new("roms/pong")),
+            Path::new("roms/pong.cfg")
+        );
+        assert_eq!(
+            settings_path(Path::new("my.roms/pong")),
             Path::new("my.roms/pong.cfg")
         );
     }

@@ -7,7 +7,7 @@
 #include <string>
 #include "layout.h"
 #include "screen.h"
-#include "../chip8/settings.h"
+#include "../chip8/rom.h"
 
 struct termios;
 

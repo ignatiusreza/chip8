@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use chip8::{settings, Quirks};
+use chip8::{rom, Quirks};
 
 use super::Result;
 
@@ -57,8 +57,8 @@ impl Args {
         let program = args.next().unwrap_or_else(|| "chip8".into());
         let usage = USAGE
             .replace("{}", &program)
-            .replace("{quirks}", settings::DEFAULT_QUIRKS)
-            .replace("{speed}", &settings::DEFAULT_SPEED.to_string());
+            .replace("{quirks}", rom::DEFAULT_QUIRKS)
+            .replace("{speed}", &rom::DEFAULT_SPEED.to_string());
 
         let mut mode = DisplayMode::default();
         let (mut quirks, mut speed) = (None, None);
@@ -67,9 +67,9 @@ impl Args {
             if let Some(value) = option(&arg, "--display", &mut args)? {
                 mode = value.parse()?;
             } else if let Some(value) = option(&arg, "--quirks", &mut args)? {
-                quirks = Some(settings::parse_quirks(&value)?);
+                quirks = Some(rom::parse_quirks(&value)?);
             } else if let Some(value) = option(&arg, "--speed", &mut args)? {
-                speed = Some(settings::parse_speed(&value).map_err(|e| format!("--{e}"))?);
+                speed = Some(rom::parse_speed(&value).map_err(|e| format!("--{e}"))?);
             } else if arg == "-h" || arg == "--help" {
                 println!("{usage}");
                 return Ok(None);
