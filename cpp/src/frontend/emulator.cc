@@ -10,8 +10,13 @@ static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode 
   return std::make_unique<Terminal>(title, howTo);
 }
 
-Emulator::Emulator(const std::string &title, DisplayMode mode, const RomSettings &howTo)
-    : _screen(openScreen(title, mode, howTo)), _speed(DEFAULT_SPEED) {}
+Emulator::Emulator(const Options &options)
+    : _screen(openScreen("Chip 8 : " + options.romPath, options.mode, options.settings)),
+      _speed(options.speed) {
+  _cpu.setQuirks(options.quirks);
+  // parseOptions already checked that it fits
+  _cpu.load(options.rom.data(), options.rom.size());
+}
 
 void Emulator::tick() {
   // play audio for as long as the sound timer runs

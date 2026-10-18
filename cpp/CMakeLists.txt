@@ -43,6 +43,7 @@ add_executable(chip8
   src/frontend/graphic.cc
   src/frontend/input.cc
   src/frontend/layout.cc
+  src/frontend/options.cc
   src/frontend/settings.cc
   src/frontend/sound.cc
   src/frontend/terminal.cc

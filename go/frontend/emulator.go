@@ -2,72 +2,41 @@
 // keyboard and speaker.
 package frontend
 
-import (
-	"fmt"
-
-	"github.com/ignatiusreza/chip8/go/chip8"
-)
+import "github.com/ignatiusreza/chip8/go/chip8"
 
 const tps = 60
 
-// Mode is where the display is shown and the keyboard read from.
-type Mode int
-
-const (
-	ModeTerminal Mode = iota // the terminal the emulator was started from (default)
-	ModeWindow               // a separate desktop window
-)
-
-// ParseMode parses a display mode name: "tui" (or "terminal"), or "window" (or "gui").
-func ParseMode(s string) (Mode, error) {
-	switch s {
-	case "tui", "terminal":
-		return ModeTerminal, nil
-	case "window", "gui":
-		return ModeWindow, nil
-	}
-	return 0, fmt.Errorf("unknown display %q, expected tui or window", s)
-}
-
 // Emulator is a CPU running a ROM, with its display, keypad and beeper hooked up.
 type Emulator struct {
-	cpu   *chip8.CPU
-	input *Input
-	sound *Sound
-	title string
-	mode  Mode
-	// opcodes run per frame
-	speed int
-	// the ROM's how to play, shown next to the game in the terminal
-	howTo RomSettings
+	cpu     *chip8.CPU
+	input   *Input
+	sound   *Sound
+	options *Options
 }
 
-// New loads the ROM and sets up the audio device; howTo is the ROM's settings, whose how
-// to play the terminal shows.
-func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int, howTo RomSettings) (*Emulator, error) {
+// New loads the ROM and sets up the audio device.
+func New(options *Options) (*Emulator, error) {
 	cpu := chip8.NewCPU()
-	cpu.SetQuirks(quirks)
-	if err := cpu.Load(rom); err != nil {
+	cpu.SetQuirks(options.Quirks)
+	if err := cpu.Load(options.Rom); err != nil {
 		return nil, err
 	}
 	return &Emulator{
-		cpu:   cpu,
-		input: &Input{},
-		sound: NewSound(),
-		title: title,
-		mode:  mode,
-		speed: speed,
-		howTo: howTo,
+		cpu:     cpu,
+		input:   &Input{},
+		sound:   NewSound(),
+		options: options,
 	}, nil
 }
 
 // Run opens the terminal or window screen and runs the emulator until Esc is pressed
 // (or the window is closed).
 func (e *Emulator) Run() error {
-	if e.mode == ModeWindow {
-		return runWindow(e, e.title)
+	title := "Chip 8 : " + e.options.RomPath
+	if e.options.Mode == ModeWindow {
+		return runWindow(e, title)
 	}
-	return runTerminal(e, e.title, e.howTo)
+	return runTerminal(e, title, e.options.Settings)
 }
 
 // tick runs one 1/60s tick: timers, keyboard, then a few opcodes. It reports false once
@@ -79,7 +48,7 @@ func (e *Emulator) tick(keys Keys) bool {
 		return false
 	}
 
-	for range e.speed {
+	for range e.options.Speed {
 		e.cpu.Step()
 	}
 	return true

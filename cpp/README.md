@@ -57,8 +57,8 @@ The code is split in two, like the Rust and Go ports:
   screen is either the `Terminal`, or a `Window` made of the SDL `Graphic` and `Input` classes.
   `settings.cc` reads a ROM's settings file and `layout.cc` places the game and its how to
   play in the terminal, both without SDL.
-  `src/main.cc` just parses the options, reads the ROM and its settings, and runs the `Emulator`
-  loop.
+  `options.cc` parses the command line and reads the ROM and its settings into the
+  `Options` the `Emulator` runs, so `src/main.cc` only runs the `Emulator` loop.
 
 The tests in `test/` cover the stack, the CPU's opcodes and quirks, the settings files and the
 terminal layout. They match the Rust and Go tests, so all three emulators are checked against

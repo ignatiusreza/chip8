@@ -11,8 +11,9 @@ world, like the C++ `Graphic`, `Input` and `Sound` classes, using
 [x/term](https://pkg.go.dev/golang.org/x/term) for the terminal display and keyboard,
 [Ebitengine](https://ebitengine.org) for the window display and keyboard, and
 [oto](https://github.com/ebitengine/oto) for the beeper; it also reads a ROM's settings
-file and places the game and its how to play in the terminal. `main.go` just parses the flags, reads the ROM and its settings, and runs the
-`Emulator`.
+file and places the game and its how to play in the terminal, and parses the command line
+and reads the ROM and its settings into the `Options` the `Emulator` runs, so `main.go` only
+runs the `Emulator`.
 
 Building
 --------

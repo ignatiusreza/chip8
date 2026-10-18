@@ -4,15 +4,9 @@
 #include <memory>
 #include <string>
 #include "../core/cpu.h"
+#include "options.h"
 #include "screen.h"
-#include "settings.h"
 #include "sound.h"
-
-// Where the display is shown and the keyboard read from.
-enum class DisplayMode {
-  Terminal, // the terminal the emulator was started from
-  Window,   // a separate desktop window (SDL video must be initialized first)
-};
 
 // A CPU running a ROM, with its display, keypad and beeper hooked up.
 class Emulator {
@@ -23,16 +17,9 @@ class Emulator {
   int     _speed;
 
   public:
-    // opens the audio device and the screen; throws std::runtime_error if the screen
-    // can't be opened. `howTo` is the ROM's settings, whose how to play the terminal shows.
-    Emulator(const std::string &title, DisplayMode mode, const RomSettings &howTo);
-
-    void setQuirks(const Quirks &quirks) { _cpu.setQuirks(quirks); }
-    // sets how many opcodes run per frame
-    void setSpeed(int speed) { _speed = speed; }
-
-    // copies the ROM into memory; returns false if it is too large
-    bool load(const unsigned char *rom, std::size_t size) { return _cpu.load(rom, size); }
+    // loads the ROM, then opens the audio device and the screen; throws
+    // std::runtime_error if the screen can't be opened
+    explicit Emulator(const Options &options);
 
     // runs one ~1/60s frame: timers, then the opcodes (handling input before each), then
     // the screen

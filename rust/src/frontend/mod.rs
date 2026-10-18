@@ -3,41 +3,19 @@
 
 mod input;
 mod layout;
+mod options;
 mod sound;
 mod terminal;
 mod window;
 
-use std::str::FromStr;
-
-use chip8::{settings, Cpu, Display, Quirks};
+use chip8::{Cpu, Display};
 use input::{Input, Keys};
+pub use options::{DisplayMode, Options};
 use sound::Sound;
 use terminal::Terminal;
 use window::Window;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-/// Where the display is shown and the keyboard read from.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum DisplayMode {
-    /// The terminal the emulator was started from.
-    #[default]
-    Terminal,
-    /// A separate desktop window.
-    Window,
-}
-
-impl FromStr for DisplayMode {
-    type Err = String;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "tui" | "terminal" => Ok(DisplayMode::Terminal),
-            "window" | "gui" => Ok(DisplayMode::Window),
-            _ => Err(format!("unknown display {s:?}, expected tui or window")),
-        }
-    }
-}
 
 /// A frontend that shows the display and reads the keyboard, once per frame.
 trait Screen {
@@ -58,31 +36,24 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    /// Loads the ROM, then opens the audio device and the screen. `how_to` is the ROM's
-    /// settings, whose how to play the terminal shows.
-    pub fn new(
-        title: &str,
-        rom: &[u8],
-        mode: DisplayMode,
-        quirks: Quirks,
-        speed: u32,
-        how_to: &settings::RomSettings,
-    ) -> Result<Self> {
+    /// Loads the ROM, then opens the audio device and the screen.
+    pub fn new(options: &Options) -> Result<Self> {
         let mut cpu = Cpu::new();
-        cpu.set_quirks(quirks);
-        cpu.load(rom)?;
+        cpu.set_quirks(options.quirks);
+        cpu.load(&options.rom)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
-        let screen: Box<dyn Screen> = match mode {
-            DisplayMode::Terminal => Box::new(Terminal::new(title, how_to)?),
-            DisplayMode::Window => Box::new(Window::new(title)?),
+        let title = format!("Chip 8 : {}", options.rom_path);
+        let screen: Box<dyn Screen> = match options.mode {
+            DisplayMode::Terminal => Box::new(Terminal::new(&title, &options.settings)?),
+            DisplayMode::Window => Box::new(Window::new(&title)?),
         };
         Ok(Emulator {
             cpu,
             input: Input::default(),
             sound,
             screen,
-            speed,
+            speed: options.speed,
         })
     }
 

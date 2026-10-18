@@ -17,7 +17,8 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 | ROM settings files | `cpp/src/frontend/settings.cc` | `rust/src/settings.rs` (in the core lib) | `go/frontend/settings.go` |
 | Terminal layout | `cpp/src/frontend/layout.cc` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
-| Options, main loop | `cpp/src/main.cc`, `emulator.cc` | `rust/src/main.rs`, `frontend/mod.rs` | `go/main.go`, `frontend/emulator.go` |
+| Command line options | `cpp/src/frontend/options.cc` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |
+| Emulator loop | `cpp/src/frontend/emulator.cc` | `rust/src/frontend/mod.rs` | `go/frontend/emulator.go` |
 
 - The tests are ports of each other, with the same names in each language's style
   (`CPUTest.WaitForKey`, `wait_for_key`, `TestWaitForKey`). When adding or changing a test,
@@ -34,6 +35,9 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 - Options are `--display tui|window`, `--quirks LIST`, `--speed N` (single dash in Go).
   Without them, quirks and speed come from the ROM's `.cfg` settings file next to it, then the
   defaults (`octo`, 15).
+- Keep each `main` compact: it only gets the `Options`, builds the `Emulator` from them and
+  runs it. Parsing, usage text, reading the ROM and settings, and other setup belong in the
+  options module (or the frontend), not in `main`.
 
 ## Web
 
