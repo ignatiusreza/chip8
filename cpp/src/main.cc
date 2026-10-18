@@ -1,7 +1,5 @@
-#include <chrono>
 #include <iostream>
 #include <stdexcept>
-#include <thread>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include "frontend/emulator.h"
@@ -21,12 +19,7 @@ int main(int argc, char *argv[]) {
 
   try {
     // scoped so the screen and audio device close before SDL_Quit
-    Emulator emulator(options);
-
-    while(emulator.isRunning()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(16));
-      emulator.tick();
-    }
+    Emulator(options).run();
   } catch(const std::runtime_error &e) {
     // reported once the terminal is restored
     std::cout << e.what() << std::endl;

@@ -1,5 +1,8 @@
 #include "emulator.h"
 
+#include <chrono>
+#include <thread>
+
 #include "settings.h"
 #include "terminal.h"
 #include "window.h"
@@ -16,6 +19,13 @@ Emulator::Emulator(const Options &options)
   _cpu.setQuirks(options.quirks);
   // parseOptions already checked that it fits
   _cpu.load(options.rom.data(), options.rom.size());
+}
+
+void Emulator::run() {
+  while(!_screen->quitRequested()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    tick();
+  }
 }
 
 void Emulator::tick() {

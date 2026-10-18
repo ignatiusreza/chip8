@@ -39,8 +39,16 @@ impl Emulator {
         })
     }
 
+    /// Runs the ROM until Esc is pressed or the window is closed.
+    pub fn run(&mut self) -> Result<()> {
+        while !self.input.quit_requested() {
+            self.tick()?;
+        }
+        Ok(())
+    }
+
     /// Runs one 1/60s frame: timers, keyboard, a few opcodes, then the screen.
-    pub fn tick(&mut self) -> Result<()> {
+    fn tick(&mut self) -> Result<()> {
         self.sound.set_playing(self.cpu.tick_timers());
         self.input.update(&self.screen.keys(), &mut self.cpu);
 
@@ -51,9 +59,5 @@ impl Emulator {
         // update screen if invalidated
         self.screen.draw(self.cpu.display_mut())?;
         Ok(())
-    }
-
-    pub fn is_running(&self) -> bool {
-        !self.input.quit_requested()
     }
 }

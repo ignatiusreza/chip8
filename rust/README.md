@@ -15,7 +15,7 @@ world, like the C++ `Graphic`, `Input` and `Sound` classes, using pure-Rust crat
 binary, behind the default `frontend` feature. `src/frontend/layout.rs` places the game and
 its how to play in the terminal, and `src/frontend/options.rs` parses the command line and
 reads the ROM and its settings into the `Options` the `Emulator` runs, so `src/main.rs` only
-runs the `Emulator` loop.
+runs the `Emulator`.
 
 Building
 --------

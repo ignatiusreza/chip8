@@ -21,11 +21,13 @@ class Emulator {
     // std::runtime_error if the screen can't be opened
     explicit Emulator(const Options &options);
 
+    // runs the ROM until Esc is pressed or the window is closed
+    void run();
+
+  private:
     // runs one ~1/60s frame: timers, then the opcodes (handling input before each), then
     // the screen
     void tick();
-
-    bool isRunning() const { return !_screen->quitRequested(); }
 };
 
 #endif	/* _CHIP8_FRONTEND_EMULATOR_H */
