@@ -199,9 +199,14 @@ TEST(CPUTest, WaitForKey) {
   CPU cpu = run({0xF30A, 0x6001});
   EXPECT_EQ(cpu.pc(), 0x202); // halted on the instruction after FX0A
   EXPECT_EQ(cpu.v(0), 0);
-  cpu.setKey(0xB, false); // a release doesn't resume
-  EXPECT_TRUE(cpu.waitingForKey());
+  cpu.setKey(0xB, false); // a release without a press doesn't resume
   cpu.setKey(0xB, true);
+  cpu.setKey(0xC, true); // the first key pressed is the one waited for
+  cpu.setKey(0xC, false);
+  cpu.step();
+  EXPECT_EQ(cpu.v(0), 0); // still waiting for the key to be released
+  EXPECT_TRUE(cpu.waitingForKey());
+  cpu.setKey(0xB, false);
   EXPECT_EQ(cpu.v(3), 0xB);
   cpu.step();
   EXPECT_EQ(cpu.v(0), 1);

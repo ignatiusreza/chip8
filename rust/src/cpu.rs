@@ -183,8 +183,10 @@ pub struct Cpu {
     stack: Vec<u16>,
     display: Display,
     keypad: Keypad,
-    /// Register waiting for a keypress (FX0A); execution halts until it's set.
+    /// Register waiting for a key (FX0A); execution halts until it's set.
     wait_for_key: Option<usize>,
+    /// The key pressed while waiting for one; FX0A stores it once it's released.
+    key_down: Option<u8>,
     /// Set by 00FD; execution halts for good.
     exited: bool,
     /// Set by DXYN with the vblank quirk; execution halts until the next frame.
@@ -220,6 +222,7 @@ impl Cpu {
             display: Display::new(),
             keypad: Keypad::default(),
             wait_for_key: None,
+            key_down: None,
             exited: false,
             wait_for_frame: false,
             flags: [0; 16],
@@ -270,16 +273,21 @@ impl Cpu {
 
     pub fn set_key(&mut self, key: u8, pressed: bool) {
         self.keypad.set(key, pressed);
-        if pressed {
-            if let Some(x) = self.wait_for_key.take() {
+        // like the COSMAC VIP, FX0A waits for a key to be pressed and then released
+        if let Some(x) = self.wait_for_key {
+            if pressed {
+                self.key_down.get_or_insert(key);
+            } else if self.key_down == Some(key) {
                 self.v[x] = key;
+                self.wait_for_key = None;
+                self.key_down = None;
             }
         }
     }
 
     /// Fetches and executes a single opcode.
     pub fn step(&mut self) {
-        // we're waiting for a keypress or the next frame, or the program is done, don't advance..
+        // we're waiting for a key or the next frame, or the program is done, don't advance..
         if self.wait_for_key.is_some() || self.wait_for_frame || self.exited {
             return;
         }
@@ -397,7 +405,7 @@ impl Cpu {
         let i = self.i as usize;
         match nn {
             0x07 => self.v[x] = self.dt,                            // FX07 (VX = DT)
-            0x0A => self.wait_for_key = Some(x), // FX0A (wait for keypress and store it to VX)
+            0x0A => self.wait_for_key = Some(x), // FX0A (wait for a key press and release, store it to VX)
             0x15 => self.dt = self.v[x],         // FX15 (DT = VX)
             0x18 => self.st = self.v[x],         // FX18 (ST = VX)
             0x1E => self.i = self.i.wrapping_add(self.v[x] as u16), // FX1E (I += VX)
@@ -658,7 +666,13 @@ mod tests {
         let mut cpu = run(&[0xF30A, 0x6001]);
         assert_eq!(cpu.pc, 0x202); // halted on the instruction after FX0A
         assert_eq!(cpu.v[0], 0);
+        cpu.set_key(0xB, false); // a release without a press doesn't resume
         cpu.set_key(0xB, true);
+        cpu.set_key(0xC, true); // the first key pressed is the one waited for
+        cpu.set_key(0xC, false);
+        cpu.step();
+        assert_eq!(cpu.v[0], 0); // still waiting for the key to be released
+        cpu.set_key(0xB, false);
         assert_eq!(cpu.v[3], 0xB);
         cpu.step();
         assert_eq!(cpu.v[0], 1);

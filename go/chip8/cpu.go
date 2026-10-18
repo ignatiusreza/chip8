@@ -144,8 +144,10 @@ type CPU struct {
 	stack   []uint16
 	display *Display
 	keypad  Keypad
-	// register waiting for a keypress (FX0A), or -1; execution halts until it's set
+	// register waiting for a key (FX0A), or -1; execution halts until it's set
 	waitForKey int
+	// the key pressed while waiting for one, or -1; FX0A stores it once it's released
+	keyDown int
 	// set by 00FD; execution halts for good
 	exited bool
 	// set by DXYN with the vblank quirk; execution halts until the next frame
@@ -162,6 +164,7 @@ func NewCPU() *CPU {
 		stack:      make([]uint16, 0, StackDepth),
 		display:    NewDisplay(),
 		waitForKey: -1,
+		keyDown:    -1,
 		random:     func() byte { return byte(rand.Uint32()) },
 	}
 	copy(c.memory[:], font[:])
@@ -207,15 +210,24 @@ func (c *CPU) TickTimers() bool {
 
 func (c *CPU) SetKey(key byte, pressed bool) {
 	c.keypad.Set(key, pressed)
-	if pressed && c.waitForKey >= 0 {
+	// like the COSMAC VIP, FX0A waits for a key to be pressed and then released
+	if c.waitForKey < 0 {
+		return
+	}
+	if pressed {
+		if c.keyDown < 0 {
+			c.keyDown = int(key)
+		}
+	} else if c.keyDown == int(key) {
 		c.v[c.waitForKey] = key
 		c.waitForKey = -1
+		c.keyDown = -1
 	}
 }
 
 // Step fetches and executes a single opcode.
 func (c *CPU) Step() {
-	// we're waiting for a keypress or the next frame, or the program is done, don't advance..
+	// we're waiting for a key or the next frame, or the program is done, don't advance..
 	if c.waitForKey >= 0 || c.waitForFrame || c.exited {
 		return
 	}
@@ -354,7 +366,7 @@ func (c *CPU) xF000(x int, nn byte) {
 	switch nn {
 	case 0x07: // FX07 (VX = DT)
 		c.v[x] = c.dt
-	case 0x0A: // FX0A (wait for keypress and store it to VX)
+	case 0x0A: // FX0A (wait for a key press and release, store it to VX)
 		c.waitForKey = x
 	case 0x15: // FX15 (DT = VX)
 		c.dt = c.v[x]

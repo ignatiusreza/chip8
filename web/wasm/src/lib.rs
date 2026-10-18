@@ -186,6 +186,8 @@ mod tests {
         assert_eq!(run_frame(10) & FLAG_CHANGED, FLAG_CHANGED); // cleared on start
         assert_eq!(run_frame(10) & FLAG_CHANGED, 0);
         set_key(1, 1);
+        assert_eq!(run_frame(10) & FLAG_CHANGED, 0); // FX0A waits for the release
+        set_key(1, 0);
         assert_eq!(run_frame(10) & FLAG_CHANGED, FLAG_CHANGED);
         // font "1" starts 0x20, a pixel at x 2 of the sprite: at (3, 1) in low resolution,
         // which is frame pixels 6 and 7 on frame rows 2 and 3, 16 bytes a row

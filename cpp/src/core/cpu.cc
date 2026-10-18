@@ -52,6 +52,7 @@ CPU::CPU() {
   memset(V, 0, sizeof(V));
   memset(_flags, 0, sizeof(_flags));
   _waitForKey = false;
+  _keyDown = -1;
   _exited = false;
   _waitForFrame = false;
 
@@ -140,10 +141,14 @@ void CPU::setKey(int key, bool pressed) {
   if(key < 0 || key >= 0x10) return;
 
   _keypad.set(key, pressed);
-  // only a keypress (not a release) resumes FX0A
-  if(_waitForKey && pressed) {
+  // like the COSMAC VIP, FX0A waits for a key to be pressed and then released
+  if(!_waitForKey) return;
+  if(pressed) {
+    if(_keyDown < 0) _keyDown = key;
+  } else if(_keyDown == key) {
     V[_keyBuff] = key;
     _waitForKey = false;
+    _keyDown = -1;
   }
 }
 
@@ -232,7 +237,7 @@ void CPU::_xF000() {
     case 0x0007: // FX07 (VX = DT)
       V[X] = DT;
       break;
-    case 0x000A: // FX0A (Wait for keypress and store it to FX)
+    case 0x000A: // FX0A (wait for a key press and release, store it to VX)
       _waitForKey = true;
       _keyBuff = X;
       break;
@@ -301,7 +306,7 @@ void CPU::_draw() {
 }
 
 void CPU::step() {
-  // we're waiting for a keypress or the next frame, or the program is done, don't advance..
+  // we're waiting for a key or the next frame, or the program is done, don't advance..
   if(_waitForKey || _waitForFrame || _exited) return;
 
   opcode = (MEM(PC) << 8) | MEM(PC+1);

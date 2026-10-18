@@ -210,9 +210,14 @@ func TestWaitForKey(t *testing.T) {
 	c := run(t, 0xF30A, 0x6001)
 	expect(t, "PC", c.pc, 0x202) // halted on the instruction after FX0A
 	expect(t, "V0", c.v[0], 0)
-	c.SetKey(0xB, false) // a release doesn't resume
-	expect(t, "waiting", c.waitForKey, 3)
+	c.SetKey(0xB, false) // a release without a press doesn't resume
 	c.SetKey(0xB, true)
+	c.SetKey(0xC, true) // the first key pressed is the one waited for
+	c.SetKey(0xC, false)
+	c.Step()
+	expect(t, "V0", c.v[0], 0) // still waiting for the key to be released
+	expect(t, "waiting", c.waitForKey, 3)
+	c.SetKey(0xB, false)
 	expect(t, "V3", c.v[3], 0xB)
 	c.Step()
 	expect(t, "V0", c.v[0], 1)
