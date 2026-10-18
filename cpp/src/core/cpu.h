@@ -3,9 +3,9 @@
 
 #include <cstddef>
 #include <string>
+#include <vector>
 #include "display.h"
 #include "keypad.h"
-#include "stack.h"
 
 #define MEMORY_SIZE 0x1000
 #define PROGRAM_START 0x200
@@ -53,7 +53,8 @@ class CPU {
   bool _exited;
   bool _waitForFrame;
 
-  Stack   _stack;
+  // return addresses, holding at most STACK_DEPTH entries
+  std::vector<unsigned short> _stack;
   Display _display;
   Keypad  _keypad;
   Quirks  _quirks;
@@ -65,6 +66,7 @@ class CPU {
 
   public:
     static constexpr std::size_t MAX_ROM_SIZE = MEMORY_SIZE - PROGRAM_START;
+    static constexpr std::size_t STACK_DEPTH = 16;
 
     CPU();
 
@@ -90,7 +92,7 @@ class CPU {
     unsigned short pc() const { return PC; }
     unsigned short index() const { return I; }
     unsigned char memory(int addr) const { return _memory[addr & (MEMORY_SIZE - 1)]; }
-    int stackSize() const { return _stack.size(); }
+    std::size_t stackSize() const { return _stack.size(); }
     bool waitingForKey() const { return _waitForKey; }
     bool exited() const { return _exited; }
 };
