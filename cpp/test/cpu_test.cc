@@ -260,6 +260,20 @@ TEST(CPUTest, ParseQuirks) {
   EXPECT_EQ(unknown, "bogus");
 }
 
+TEST(CPUTest, DescribeQuirks) {
+  std::string unknown;
+  for(const char *list : {"octo", "vip", "schip", "octo,vf-reset", "octo,vblank", "vip,wrap", "schip,wrap",
+                           "schip,shift,load-store,jump-v0"}) {
+    Quirks quirks;
+    quirks.parse(list, unknown);
+    EXPECT_EQ(quirks.describe(), list);
+  }
+  // the same quirks as vip,wrap, which needs fewer added
+  Quirks quirks;
+  quirks.parse("octo,vf-reset,vblank", unknown);
+  EXPECT_EQ(quirks.describe(), "vip,wrap");
+}
+
 TEST(CPUTest, ShiftQuirkShiftsVY) {
   Quirks quirks;
   quirks.shift = true;

@@ -110,6 +110,30 @@ func (q Quirks) Apply(s string) (Quirks, error) {
 	return q, nil
 }
 
+// String returns the shortest list that Apply turns into these quirks: the preset they
+// match, or the one needing the fewest quirks added, e.g. "octo,vf-reset".
+func (q Quirks) String() string {
+	flags := func(q Quirks) [6]bool { return [6]bool{q.Shift, q.LoadStore, q.VFReset, q.JumpV0, q.Wrap, q.VBlank} }
+	names := [6]string{"shift", "load-store", "vf-reset", "jump-v0", "wrap", "vblank"}
+	best, fewest := "", len(names)+1
+	for _, name := range []string{"octo", "vip", "schip"} {
+		preset, _ := ParseQuirks(name)
+		list, added, subset := name, 0, true
+		for i, on := range flags(q) {
+			if p := flags(preset)[i]; p && !on {
+				subset = false
+			} else if on && !p {
+				list += "," + names[i]
+				added++
+			}
+		}
+		if subset && added < fewest {
+			best, fewest = list, added
+		}
+	}
+	return best
+}
+
 type CPU struct {
 	v      [16]byte
 	i      uint16

@@ -67,6 +67,10 @@ std::vector<std::string> howToPlay(const RomSettings &settings, int width) {
     controls.insert(controls.end(), settings.controls.begin(), settings.controls.end());
     section(controls, 2);
   }
+  std::vector<std::string> running;
+  if(settings.quirks) running.push_back("Quirks: " + settings.quirks->describe());
+  if(settings.speed) running.push_back("Speed: " + std::to_string(*settings.speed) + " opcodes per frame");
+  section(running, 2);
   return lines;
 }
 

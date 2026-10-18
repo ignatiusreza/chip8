@@ -59,7 +59,10 @@ func main() {
 	} else if settings.Speed != nil {
 		speed = *settings.Speed
 	}
-	emulator, err := frontend.New("Chip 8 : "+path, rom, mode, quirks, speed, settings)
+	// the terminal shows the quirks and speed the ROM runs with, alongside its how to play
+	shown := settings
+	shown.Quirks, shown.Speed = &quirks, &speed
+	emulator, err := frontend.New("Chip 8 : "+path, rom, mode, quirks, speed, shown)
 	if err != nil {
 		log.Fatal(err)
 	}

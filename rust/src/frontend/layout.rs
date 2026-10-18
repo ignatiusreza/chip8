@@ -108,8 +108,8 @@ fn below(columns: usize, rows: usize, scale: usize, panel: Vec<String>) -> Layou
     }
 }
 
-/// The ROM's title, author, about and controls as lines of at most `width` characters,
-/// with blank lines between them.
+/// The ROM's title, author, about, controls, and the quirks and speed it runs with, as
+/// lines of at most `width` characters, with blank lines between them.
 pub fn how_to_play(settings: &RomSettings, width: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut section = |texts: &[String], indent: usize| {
@@ -141,6 +141,16 @@ pub fn how_to_play(settings: &RomSettings, width: usize) -> Vec<String> {
             .collect();
         section(&controls, 2);
     }
+    let running: Vec<String> = [
+        settings.quirks.map(|quirks| format!("Quirks: {quirks}")),
+        settings
+            .speed
+            .map(|speed| format!("Speed: {speed} opcodes per frame")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    section(&running, 2);
     lines
 }
 
@@ -223,6 +233,20 @@ mod tests {
             ]
         );
         assert!(how_to_play(&RomSettings::default(), 30).is_empty());
+    }
+
+    #[test]
+    fn how_to_play_shows_quirks_and_speed() {
+        let settings = RomSettings {
+            quirks: Some("octo,vf-reset".parse().unwrap()),
+            speed: Some(7),
+            ..br8kout()
+        };
+        let lines = how_to_play(&settings, 40);
+        assert_eq!(
+            lines[lines.len() - 3..],
+            ["", "Quirks: octo,vf-reset", "Speed: 7 opcodes per frame"]
+        );
     }
 
     #[test]

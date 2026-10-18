@@ -11,8 +11,9 @@ than one language.
 All three draw in the terminal they are started from by default, and can open a separate
 window instead with `--display window`.
 
-In the terminal, the game is centred, with the ROM's [how to play](#rom-settings) next to it, or
-below it when the terminal is too narrow. A terminal of at least 130x35 shows the game at double
+In the terminal, the game is centred, with the ROM's [how to play](#rom-settings) and the
+[quirks](#quirks) and [speed](#speed) it runs with next to it, or below it when the terminal is
+too narrow. A terminal of at least 130x35 shows the game at double
 size: 128x32 characters, each showing 1x2 high resolution pixels as a half block. Smaller ones
 show it as 64x16 characters, each showing 2x2 low resolution pixels as half blocks, or 2x4 high
 resolution pixels as a braille character; that needs at least 66x19. The layout follows the
@@ -107,7 +108,8 @@ starting with `#` are comments:
 
 Without `--quirks` or `--speed`, the emulators run the ROM with the quirks and speed from its
 settings file, or the defaults for those it doesn't give. The other settings describe how to
-play, which the terminal shows next to the game.
+play, which the terminal shows next to the game, along with the quirks and speed in use. The
+quirks are shown as the shortest list that `--quirks` takes for them, e.g. `octo,vf-reset`.
 
 References for the bytecodes used is from :
 

@@ -122,6 +122,47 @@ impl Quirks {
     }
 }
 
+/// Formats the quirks as the shortest list that parses back to them: the preset they
+/// match, or the one needing the fewest quirks added, e.g. "octo,vf-reset".
+impl std::fmt::Display for Quirks {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let flags = |q: &Quirks| {
+            [
+                (q.shift, "shift"),
+                (q.load_store, "load-store"),
+                (q.vf_reset, "vf-reset"),
+                (q.jump_v0, "jump-v0"),
+                (q.wrap, "wrap"),
+                (q.vblank, "vblank"),
+            ]
+        };
+        let best = ["octo", "vip", "schip"]
+            .into_iter()
+            .filter_map(|name| {
+                let preset = flags(&Quirks::default().apply(name).ok()?);
+                let ours = flags(self);
+                // the preset's quirks must all be on
+                if preset.iter().zip(&ours).any(|(p, o)| p.0 && !o.0) {
+                    return None;
+                }
+                let added: Vec<&str> = preset
+                    .iter()
+                    .zip(&ours)
+                    .filter(|(p, o)| o.0 && !p.0)
+                    .map(|(_, o)| o.1)
+                    .collect();
+                Some((name, added))
+            })
+            .min_by_key(|(_, added)| added.len());
+        let (name, added) = best.expect("schip has no quirks, so it always matches");
+        write!(f, "{name}")?;
+        for quirk in added {
+            write!(f, ",{quirk}")?;
+        }
+        Ok(())
+    }
+}
+
 /// Parses a quirk list (see `Quirks::apply`), starting from no quirks.
 impl std::str::FromStr for Quirks {
     type Err = String;
@@ -695,6 +736,25 @@ mod tests {
             .parse::<Quirks>()
             .unwrap_err()
             .contains("\"bogus\""));
+    }
+
+    #[test]
+    fn display_quirks() {
+        for list in [
+            "octo",
+            "vip",
+            "schip",
+            "octo,vf-reset",
+            "schip,wrap",
+            "schip,shift,load-store,jump-v0",
+            "octo,vblank",
+            "vip,wrap",
+        ] {
+            assert_eq!(list.parse::<Quirks>().unwrap().to_string(), list);
+        }
+        // the same quirks as vip,wrap, which needs fewer added
+        let quirks: Quirks = "octo,vf-reset,vblank".parse().unwrap();
+        assert_eq!(quirks.to_string(), "vip,wrap");
     }
 
     #[test]

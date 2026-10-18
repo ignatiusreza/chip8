@@ -43,6 +43,16 @@ TEST(LayoutTest, HowToPlay) {
   EXPECT_TRUE(howToPlay(RomSettings(), 30).empty());
 }
 
+TEST(LayoutTest, HowToPlayShowsQuirksAndSpeed) {
+  RomSettings settings = br8kout();
+  std::string unknown;
+  settings.quirks.emplace().parse("octo,vf-reset", unknown);
+  settings.speed = 7;
+  std::vector<std::string> lines = howToPlay(settings, 40);
+  EXPECT_EQ(std::vector<std::string>(lines.end() - 3, lines.end()),
+            (std::vector<std::string>{"", "Quirks: octo,vf-reset", "Speed: 7 opcodes per frame"}));
+}
+
 TEST(LayoutTest, WrapSplitsLongWords) {
   EXPECT_EQ(wrap("abcdefgh", 4, 2), (std::vector<std::string>{"abcd", "  ef", "  gh"}));
   EXPECT_EQ(textWidth("█▀ ab"), 5);

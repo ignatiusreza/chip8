@@ -28,6 +28,12 @@ struct Quirks {
   // and quirk names (shift, load-store, vf-reset, jump-v0, wrap, vblank), which turn one on,
   // from left to right; returns false and sets `unknown` on a name it doesn't know
   bool parse(const std::string &list, std::string &unknown);
+
+  // the shortest list that parse turns into these quirks: the preset they match, or the
+  // one needing the fewest quirks added, e.g. "octo,vf-reset"
+  std::string describe() const;
+
+  bool operator==(const Quirks &other) const;
 };
 
 // The CHIP-8 machine: memory, registers, timers, stack, display and keypad. It has

@@ -138,7 +138,11 @@ int main(int argc, char *argv[]) {
   int status = 0;
   try {
     // scoped so the screen and audio device close before SDL_Quit
-    Emulator emulator(static_cast<std::string>("Chip 8 : ") + romPath, mode, romSettings);
+    // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
+    RomSettings shown = romSettings;
+    shown.quirks = quirks;
+    shown.speed = speed;
+    Emulator emulator(static_cast<std::string>("Chip 8 : ") + romPath, mode, shown);
     emulator.setQuirks(quirks);
     emulator.setSpeed(speed);
     emulator.load(rom.data(), rom.size());

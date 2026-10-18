@@ -71,7 +71,12 @@ fn main() -> frontend::Result<()> {
         mode,
         quirks,
         speed,
-        &rom_settings,
+        // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
+        &settings::RomSettings {
+            quirks: Some(quirks),
+            speed: Some(speed),
+            ..rom_settings
+        },
     )?;
 
     while emulator.is_running() {

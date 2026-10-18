@@ -282,6 +282,22 @@ func TestParseQuirks(t *testing.T) {
 	}
 }
 
+func TestQuirksString(t *testing.T) {
+	for _, list := range []string{
+		"octo", "vip", "schip", "octo,vf-reset", "octo,vblank", "vip,wrap", "schip,wrap",
+		"schip,shift,load-store,jump-v0",
+	} {
+		q, err := ParseQuirks(list)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expect(t, list, q.String(), list)
+	}
+	// the same quirks as vip,wrap, which needs fewer added
+	q, _ := ParseQuirks("octo,vf-reset,vblank")
+	expect(t, "octo,vf-reset,vblank", q.String(), "vip,wrap")
+}
+
 func TestShiftQuirkShiftsVY(t *testing.T) {
 	q := Quirks{Shift: true}
 	c := runWith(t, q, 0x6081, 0x6103, 0x8016)

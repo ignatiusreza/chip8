@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ctime>
 #include <sstream>
+#include <utility>
 
 #define MEM(addr) _memory[(addr) & (MEMORY_SIZE - 1)]
 #define VX  V[((opcode & 0x0F00) >> 8)]
@@ -81,6 +82,41 @@ bool Quirks::parse(const std::string &list, std::string &unknown) {
     }
   }
   return true;
+}
+
+bool Quirks::operator==(const Quirks &o) const {
+  return shift == o.shift && loadStore == o.loadStore && vfReset == o.vfReset &&
+         jumpV0 == o.jumpV0 && wrap == o.wrap && vblank == o.vblank;
+}
+
+std::string Quirks::describe() const {
+  // each quirk with its name, in the order they are listed
+  const std::pair<bool Quirks::*, const char *> QUIRKS[] = {
+    {&Quirks::shift, "shift"}, {&Quirks::loadStore, "load-store"}, {&Quirks::vfReset, "vf-reset"},
+    {&Quirks::jumpV0, "jump-v0"}, {&Quirks::wrap, "wrap"}, {&Quirks::vblank, "vblank"},
+  };
+  std::string best;
+  int fewest = 7;
+  for(const char *name : {"octo", "vip", "schip"}) {
+    Quirks preset;
+    std::string unknown;
+    preset.parse(name, unknown);
+    std::string list = name;
+    int added = 0;
+    bool subset = true;
+    for(const auto &[quirk, quirkName] : QUIRKS) {
+      if(preset.*quirk && !(this->*quirk)) subset = false;
+      if(this->*quirk && !(preset.*quirk)) {
+        list += std::string(",") + quirkName;
+        added++;
+      }
+    }
+    if(subset && added < fewest) {
+      best = list;
+      fewest = added;
+    }
+  }
+  return best;
 }
 
 bool CPU::load(const unsigned char *rom, std::size_t size) {

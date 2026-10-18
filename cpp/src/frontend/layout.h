@@ -26,8 +26,8 @@ struct Layout {
 // and centres them in a columns x rows terminal
 Layout layoutTerminal(int columns, int rows, const RomSettings &settings);
 
-// the ROM's title, author, about and controls as lines of at most `width` characters,
-// with blank lines between them
+// the ROM's title, author, about, controls, and the quirks and speed it runs with, as
+// lines of at most `width` characters, with blank lines between them
 std::vector<std::string> howToPlay(const RomSettings &settings, int width);
 
 // breaks text into lines of at most `width` characters at spaces, indenting the lines

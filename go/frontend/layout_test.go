@@ -34,6 +34,18 @@ func TestHowToPlay(t *testing.T) {
 	}
 }
 
+func TestHowToPlayShowsQuirksAndSpeed(t *testing.T) {
+	settings := br8kout
+	quirks, _ := ParseQuirks("vf-reset")
+	speed := 7
+	settings.Quirks, settings.Speed = &quirks, &speed
+	lines := howToPlay(settings, 40)
+	want := []string{"", "Quirks: octo,vf-reset", "Speed: 7 opcodes per frame"}
+	if got := lines[len(lines)-3:]; !slices.Equal(got, want) {
+		t.Errorf("howToPlay() ends with %q, want %q", got, want)
+	}
+}
+
 func TestWrapSplitsLongWords(t *testing.T) {
 	want := []string{"abcd", "  ef", "  gh"}
 	if got := wrap("abcdefgh", 4, 2); !slices.Equal(got, want) {

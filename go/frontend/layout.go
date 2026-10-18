@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -79,8 +80,8 @@ func below(columns, rows, scale int, panel []string) layout {
 	return layout{true, scale, x, y, x + 1, y + gh + 1, panel}
 }
 
-// howToPlay lays out the ROM's title, author, about and controls as lines of at most
-// width characters, with blank lines between them.
+// howToPlay lays out the ROM's title, author, about, controls, and the quirks and speed it
+// runs with, as lines of at most width characters, with blank lines between them.
 func howToPlay(settings RomSettings, width int) []string {
 	var lines []string
 	section := func(texts []string, indent int) {
@@ -106,6 +107,14 @@ func howToPlay(settings RomSettings, width int) []string {
 	if len(settings.Controls) > 0 {
 		section(append([]string{"Controls"}, settings.Controls...), 2)
 	}
+	var running []string
+	if settings.Quirks != nil {
+		running = append(running, "Quirks: "+settings.Quirks.String())
+	}
+	if settings.Speed != nil {
+		running = append(running, fmt.Sprintf("Speed: %d opcodes per frame", *settings.Speed))
+	}
+	section(running, 2)
 	return lines
 }
 

@@ -25,7 +25,8 @@ opcodes per frame); the emulators use those when they load the ROM:
     speed = 7
 
 The quirks and speed come from each program's entry in the archive, which records the Octo
-quirk flags and speed it was made for, except Tick, whose own readme also asks for `vblank`.
+quirk flags and speed it was made for, except Tick, whose own readme also asks for `vblank`
+(so `vip,wrap` rather than the archive's `octo,vf-reset`).
 The how to play comes from the program's readme in the archive where it has one, and
 otherwise from its source. The table shows the quirks and speed, with `-` for the default.
 
@@ -53,7 +54,7 @@ otherwise from its source. The table shows the quirks and speed, with `-` for th
 | `superpong.ch8` | Super Pong | offstatic | CHIP-8 | - | 30 | A fast pong-like |
 | `sweetcopter.ch8` | Sw8 Copter | JohnEarnest | SUPER-CHIP | - | 100 | An adaptation of "Swing Copters" for the Super Chip8 |
 | `binding.ch8` | The Binding of COSMAC | buffi | SUPER-CHIP | schip,shift,load-store,jump-v0 | 1000 | Simplified Isaac demake for SCHIP |
-| `tick.ch8` | Tick | StanislavDidus | CHIP-8 | vf-reset,vblank | 12 | Rhythm one button game for Chip-8 |
+| `tick.ch8` | Tick | StanislavDidus | CHIP-8 | vip,wrap | 12 | Rhythm one button game for Chip-8 |
 | `wdl.ch8` | WDL | JohnEarnest | CHIP-8 | vip | - | That word game, but shorter |
 
 Controls
