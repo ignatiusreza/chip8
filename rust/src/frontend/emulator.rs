@@ -22,20 +22,20 @@ pub struct Emulator {
 impl Emulator {
     /// Loads the ROM and its settings file, then opens the audio device and the screen.
     pub fn new(args: &Args) -> Result<Self> {
-        let rom = Rom::load(Path::new(&args.rom_path))?;
+        let rom_file = Rom::load(Path::new(&args.rom_path))?;
         // the command line wins over the ROM's settings file, which wins over the defaults
         let quirks = args
             .quirks
-            .or(rom.settings.quirks)
+            .or(rom_file.settings.quirks)
             .unwrap_or_else(rom::default_quirks);
         let speed = args
             .speed
-            .or(rom.settings.speed)
+            .or(rom_file.settings.speed)
             .unwrap_or(rom::DEFAULT_SPEED);
 
         let mut cpu = Cpu::new();
         cpu.set_quirks(quirks);
-        cpu.load(&rom.data)?;
+        cpu.load(&rom_file.data)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
         let title = format!("Chip 8 : {}", args.rom_path);
@@ -46,7 +46,7 @@ impl Emulator {
                 &RomSettings {
                     quirks: Some(quirks),
                     speed: Some(speed),
-                    ..rom.settings
+                    ..rom_file.settings
                 },
             )?),
             DisplayMode::Window => Box::new(Window::new(&title)?),
