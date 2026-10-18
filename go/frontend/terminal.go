@@ -17,30 +17,33 @@ import (
 // before the terminal starts repeating it.
 const hold = 200 * time.Millisecond
 
-// termKeymap is the character for each CHIP-8 keypad value, on the left side of a QWERTY
-// keyboard.
-const termKeymap = "1qweasdzxcrfvtgb"
+// termKeymap is the character for each CHIP-8 keypad value, laid out like the COSMAC
+// VIP keypad on the left of a QWERTY keyboard:
+//
+//	1 2 3 4        1 2 3 C
+//	Q W E R   ->   4 5 6 D
+//	A S D F        7 8 9 E
+//	Z X C V        A 0 B F
+//
+// so W A S D are 5 7 8 9, the up, left, down and right of most games
+const termKeymap = "x123qweasdzc4rfv"
 
-// the display plus a one character border, and a title line above it
-const (
-	termColumns = chip8.Width + 2
-	termRows    = chip8.Height/2 + 3
-)
-
-// terminal runs the emulator in the terminal it was started from, showing the 64x32
-// display as 64x16 half-block characters.
+// terminal runs the emulator in the terminal it was started from, showing the display
+// and the ROM's how to play, centred.
 type terminal struct {
 	title     string
+	howTo     RomSettings
 	input     chan []byte
 	lastPress [16]time.Time
 	quit      bool
 	width     int
 	height    int
+	layout    layout
 }
 
 // runTerminal switches the terminal to raw mode and an alternate screen, and runs the
 // emulator at 60 ticks per second until Esc is pressed.
-func runTerminal(e *Emulator, title string) error {
+func runTerminal(e *Emulator, title string, howTo RomSettings) error {
 	in, out := int(os.Stdin.Fd()), int(os.Stdout.Fd())
 	if !term.IsTerminal(in) || !term.IsTerminal(out) {
 		return errors.New("the terminal display needs an interactive terminal, try -display window")
@@ -54,7 +57,7 @@ func runTerminal(e *Emulator, title string) error {
 	fmt.Printf("\x1b[?1049h\x1b[?25l\x1b]0;%s\a", title)
 	defer fmt.Print("\x1b[?25h\x1b[?1049l")
 
-	t := &terminal{title: title, input: make(chan []byte, 16)}
+	t := &terminal{title: title, howTo: howTo, input: make(chan []byte, 16)}
 	go t.read()
 
 	ticker := time.NewTicker(time.Second / tps)
@@ -125,8 +128,8 @@ func lower(c byte) byte {
 	return c
 }
 
-// draw redraws the display if it changed or the terminal was resized. Each frame
-// overwrites the last, so the terminal only needs clearing when resized.
+// draw redraws the display if it changed or the terminal was resized. The title, border
+// and how to play are only drawn when the terminal is resized, which clears it.
 func (t *terminal) draw(display *chip8.Display) {
 	width, height, _ := term.GetSize(int(os.Stdout.Fd()))
 	resized := width != t.width || height != t.height
@@ -136,35 +139,84 @@ func (t *terminal) draw(display *chip8.Display) {
 	}
 
 	var b strings.Builder
+	l := &t.layout
 	if resized {
+		*l = layoutTerminal(width, height, t.howTo)
 		b.WriteString("\x1b[2J")
-	}
-	b.WriteString("\x1b[H")
-	if width < termColumns || height < termRows {
-		fmt.Fprintf(&b, "Terminal too small, needs %dx%d", termColumns, termRows)
-		os.Stdout.WriteString(b.String())
+		if !l.fits {
+			fmt.Fprintf(&b, "\x1b[HTerminal too small, needs %dx%d", gameColumns(1), gameRows(1))
+			os.Stdout.WriteString(b.String())
+			return
+		}
+		cells := gameColumns(l.scale) - 2
+		title := []rune(t.title + " (Esc to quit)")
+		moveTo(&b, l.gameX, l.gameY)
+		b.WriteString(string(title[:min(len(title), cells+2)]))
+		moveTo(&b, l.gameX, l.gameY+1)
+		b.WriteString("┌" + strings.Repeat("─", cells) + "┐")
+		for row := range gameRows(l.scale) - 3 {
+			moveTo(&b, l.gameX, l.gameY+2+row)
+			b.WriteString("│")
+			moveTo(&b, l.gameX+cells+1, l.gameY+2+row)
+			b.WriteString("│")
+		}
+		moveTo(&b, l.gameX, l.gameY+gameRows(l.scale)-1)
+		b.WriteString("└" + strings.Repeat("─", cells) + "┘")
+		for i, line := range l.panel {
+			moveTo(&b, l.panelX, l.panelY+i)
+			b.WriteString(line)
+		}
+	} else if !l.fits {
 		return
 	}
 
-	fmt.Fprintf(&b, "%s (Esc to quit)\r\n", t.title)
-	b.WriteString("┌" + strings.Repeat("─", chip8.Width) + "┐\r\n")
-	// each character cell holds two pixels, one above the other
-	for y := 0; y < chip8.Height; y += 2 {
-		b.WriteString("│")
-		for x := range chip8.Width {
-			switch top, bottom := display.Get(x, y), display.Get(x, y+1); {
-			case top && bottom:
-				b.WriteString("█")
-			case top:
-				b.WriteString("▀")
-			case bottom:
-				b.WriteString("▄")
+	for row := range gameRows(l.scale) - 3 {
+		moveTo(&b, l.gameX+1, l.gameY+2+row)
+		for col := range gameColumns(l.scale) - 2 {
+			switch {
+			case l.scale == 2:
+				// two frame pixels, one above the other
+				b.WriteString(halfBlock(display.Pixel(col, row*2), display.Pixel(col, row*2+1)))
+			case display.Hires():
+				b.WriteRune(braille(display, col*2, row*4))
 			default:
-				b.WriteByte(' ')
+				// two low resolution pixels, one above the other
+				b.WriteString(halfBlock(display.Get(col, row*2), display.Get(col, row*2+1)))
 			}
 		}
-		b.WriteString("│\r\n")
 	}
-	b.WriteString("└" + strings.Repeat("─", chip8.Width) + "┘")
 	os.Stdout.WriteString(b.String())
+}
+
+// moveTo moves the cursor to the 0-based column x and row y.
+func moveTo(b *strings.Builder, x, y int) {
+	fmt.Fprintf(b, "\x1b[%d;%dH", y+1, x+1)
+}
+
+// braille is the braille character showing the 2x4 high resolution pixels at (x, y).
+func braille(display *chip8.Display, x, y int) rune {
+	// the bit of each dot, by column then row
+	dots := [2][4]rune{{0x01, 0x02, 0x04, 0x40}, {0x08, 0x10, 0x20, 0x80}}
+	bits := rune(0)
+	for dx, column := range dots {
+		for dy, bit := range column {
+			if display.Pixel(x+dx, y+dy) {
+				bits |= bit
+			}
+		}
+	}
+	return 0x2800 + bits
+}
+
+// halfBlock is the half block showing two pixels, one above the other.
+func halfBlock(top, bottom bool) string {
+	switch {
+	case top && bottom:
+		return "█"
+	case top:
+		return "▀"
+	case bottom:
+		return "▄"
+	}
+	return " "
 }

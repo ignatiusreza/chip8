@@ -2,17 +2,25 @@ package chip8
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
 // run loads the program and executes one step per opcode.
 func run(t *testing.T, program ...uint16) *CPU {
 	t.Helper()
+	return runWith(t, Quirks{}, program...)
+}
+
+// runWith is run, with the given quirks.
+func runWith(t *testing.T, q Quirks, program ...uint16) *CPU {
+	t.Helper()
 	rom := make([]byte, 0, len(program)*2)
 	for _, op := range program {
 		rom = append(rom, byte(op>>8), byte(op))
 	}
 	c := NewCPU()
+	c.SetQuirks(q)
 	if err := c.Load(rom); err != nil {
 		t.Fatal(err)
 	}
@@ -247,4 +255,199 @@ func TestTimers(t *testing.T) {
 	expect(t, "beep 3", c.TickTimers(), false)
 	c.execute(0xF107)
 	expect(t, "V1", c.v[1], 0)
+}
+
+func TestParseQuirks(t *testing.T) {
+	q, err := ParseQuirks("octo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "octo", q, Quirks{Shift: true, LoadStore: true, Wrap: true, JumpV0: true})
+
+	// presets reset the quirks named before them, single quirks add to them
+	q, err = ParseQuirks("wrap,vip,vf-reset")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "wrap,vip,vf-reset", q, Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true, JumpV0: true})
+
+	q, err = ParseQuirks("octo,schip,jump-v0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "octo,schip,jump-v0", q, Quirks{JumpV0: true})
+
+	if _, err := ParseQuirks("schip,bogus"); err == nil || !strings.Contains(err.Error(), `"bogus"`) {
+		t.Errorf("ParseQuirks(schip,bogus) error = %v, want one naming \"bogus\"", err)
+	}
+}
+
+func TestQuirksString(t *testing.T) {
+	for _, list := range []string{
+		"octo", "vip", "schip", "octo,vf-reset", "octo,vblank", "vip,wrap", "schip,wrap",
+		"schip,shift,load-store,jump-v0",
+	} {
+		q, err := ParseQuirks(list)
+		if err != nil {
+			t.Fatal(err)
+		}
+		expect(t, list, q.String(), list)
+	}
+	// the same quirks as vip,wrap, which needs fewer added
+	q, _ := ParseQuirks("octo,vf-reset,vblank")
+	expect(t, "octo,vf-reset,vblank", q.String(), "vip,wrap")
+}
+
+func TestShiftQuirkShiftsVY(t *testing.T) {
+	q := Quirks{Shift: true}
+	c := runWith(t, q, 0x6081, 0x6103, 0x8016)
+	expect(t, "V0", c.v[0], 0x01)
+	expect(t, "VF", c.v[0xF], 1)
+
+	c = runWith(t, q, 0x6001, 0x6181, 0x801E)
+	expect(t, "V0", c.v[0], 0x02)
+	expect(t, "VF", c.v[0xF], 1)
+}
+
+func TestLoadStoreQuirkAdvancesI(t *testing.T) {
+	q := Quirks{LoadStore: true}
+	expect(t, "I after FX55", runWith(t, q, 0xA300, 0xF255).i, 0x303)
+	expect(t, "I after FX65", runWith(t, q, 0xA300, 0xF065).i, 0x301)
+}
+
+func TestVFResetQuirk(t *testing.T) {
+	expect(t, "VF", run(t, 0x6F05, 0x8011).v[0xF], 5)
+
+	for _, op := range []uint16{0x8011, 0x8012, 0x8013} {
+		expect(t, "VF", runWith(t, Quirks{VFReset: true}, 0x6F05, op).v[0xF], 0)
+	}
+}
+
+func TestVBlankQuirkWaitsForTheNextFrame(t *testing.T) {
+	expect(t, "V0", run(t, 0xA000, 0xD001, 0x6001).v[0], 1)
+
+	c := runWith(t, Quirks{VBlank: true}, 0xA000, 0xD001, 0x6001)
+	expect(t, "V0", c.v[0], 0)
+	expect(t, "PC", c.pc, 0x204)
+	c.TickTimers()
+	c.Step()
+	expect(t, "V0", c.v[0], 1)
+}
+
+func TestJumpV0QuirkUsesV0(t *testing.T) {
+	// B300 jumps to 0x300 + V3 like SUPER-CHIP, or to 0x300 + V0 with the quirk
+	expect(t, "PC", run(t, 0x6004, 0x6302, 0xB300).pc, 0x302)
+	expect(t, "PC", runWith(t, Quirks{JumpV0: true}, 0x6004, 0x6302, 0xB300).pc, 0x304)
+}
+
+func TestWrapQuirkWrapsSprites(t *testing.T) {
+	// the top row of font "0" at (62, 31) is clipped after two pixels by default
+	c := run(t, 0x603E, 0x611F, 0xA000, 0xD011)
+	expect(t, "(63, 31)", c.display.Get(63, 31), true)
+	expect(t, "(0, 31)", c.display.Get(0, 31), false)
+
+	c = runWith(t, Quirks{Wrap: true}, 0x603E, 0x611F, 0xA000, 0xD012)
+	expect(t, "(63, 31)", c.display.Get(63, 31), true)
+	expect(t, "(0, 31)", c.display.Get(0, 31), true)
+	expect(t, "(1, 31)", c.display.Get(1, 31), true)
+	expect(t, "(2, 31)", c.display.Get(2, 31), false)
+	// the second row wraps to the top
+	expect(t, "(62, 0)", c.display.Get(62, 0), true)
+	expect(t, "(1, 0)", c.display.Get(1, 0), true)
+}
+
+func TestHighResolution(t *testing.T) {
+	c := run(t, 0x00FF)
+	expect(t, "Hires()", c.display.Hires(), true)
+	expect(t, "Width()", c.display.Width(), 128)
+	expect(t, "Height()", c.display.Height(), 64)
+
+	// font "0" at (100, 50) is only on screen in high resolution
+	c = run(t, 0x00FF, 0x6064, 0x6132, 0xA000, 0xD015)
+	expect(t, "Get(100, 50)", c.display.Get(100, 50), true)
+	expect(t, "Pixel(100, 50)", c.display.Pixel(100, 50), true)
+	expect(t, "Pixel(101, 51)", c.display.Pixel(101, 51), false)
+
+	// switching back clears the screen, and low resolution pixels cover 2x2 frame pixels
+	c = run(t, 0x00FF, 0xA000, 0xD015, 0x00FE, 0xD011)
+	expect(t, "Hires()", c.display.Hires(), false)
+	expect(t, "Width()", c.display.Width(), 64)
+	expect(t, "Get(3, 0)", c.display.Get(3, 0), true)
+	expect(t, "Pixel(7, 1)", c.display.Pixel(7, 1), true)
+	expect(t, "Get(0, 1)", c.display.Get(0, 1), false)
+}
+
+func TestDrawLargeSprite(t *testing.T) {
+	// a 16x16 sprite of 0xFF00 rows from 0x300, at (120, 60) in high resolution, clipped
+	// at the edges, then drawn again
+	var rom []byte
+	for _, op := range []uint16{0x00FF, 0x6078, 0x613C, 0xA300, 0xD010, 0xD010} {
+		rom = append(rom, byte(op>>8), byte(op))
+	}
+	rom = append(rom, make([]byte, 0x100-len(rom))...)
+	for range 16 {
+		rom = append(rom, 0xFF, 0x00)
+	}
+	c := NewCPU()
+	if err := c.Load(rom); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		c.Step()
+	}
+	expect(t, "Get(120, 60)", c.display.Get(120, 60), true)
+	expect(t, "Get(127, 63)", c.display.Get(127, 63), true)
+	expect(t, "Get(0, 60)", c.display.Get(0, 60), false)
+	expect(t, "Get(120, 0)", c.display.Get(120, 0), false)
+	expect(t, "VF", c.v[0xF], 0)
+
+	c.Step()
+	expect(t, "Get(120, 60)", c.display.Get(120, 60), false)
+	expect(t, "VF", c.v[0xF], 1)
+}
+
+func TestScroll(t *testing.T) {
+	// the top row of font "0" (4 pixels) at (8, 0)
+	c := run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00C3)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+	expect(t, "Get(8, 3)", c.display.Get(8, 3), true)
+
+	c = run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+	expect(t, "Get(12, 0)", c.display.Get(12, 0), true)
+	expect(t, "Get(15, 0)", c.display.Get(15, 0), true)
+
+	c = run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FC)
+	expect(t, "Get(4, 0)", c.display.Get(4, 0), true)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+
+	// pixels scrolled off the screen are gone
+	c = run(t, 0x6000, 0x6100, 0xA000, 0xD011, 0x00FC, 0x00FB)
+	expect(t, "Get(0, 0)", c.display.Get(0, 0), false)
+	expect(t, "Get(4, 0)", c.display.Get(4, 0), false)
+
+	// in high resolution, scrolling is by high resolution pixels
+	c = run(t, 0x00FF, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB, 0x00C1)
+	expect(t, "Get(12, 1)", c.display.Get(12, 1), true)
+	expect(t, "Get(11, 1)", c.display.Get(11, 1), false)
+}
+
+func TestBigFont(t *testing.T) {
+	c := run(t, 0x6007, 0xF030)
+	expect(t, "I", c.i, BigFontStart+7*BigFontByteLength)
+	expect(t, "top of the 7", c.memory[c.i], 0xFF)
+}
+
+func TestSaveAndRestoreFlags(t *testing.T) {
+	c := run(t, 0x6001, 0x6102, 0x6203, 0xF275, 0x6000, 0x6100, 0x6200, 0xF185)
+	expect(t, "V0", c.v[0], 1)
+	expect(t, "V1", c.v[1], 2)
+	expect(t, "V2", c.v[2], 0)
+}
+
+func TestExit(t *testing.T) {
+	c := run(t, 0x00FD, 0x6001)
+	expect(t, "Exited()", c.Exited(), true)
+	expect(t, "PC", c.pc, 0x202)
+	expect(t, "V0", c.v[0], 0)
 }

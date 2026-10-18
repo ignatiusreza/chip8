@@ -6,7 +6,7 @@ Graphic::Graphic(const std::string &title)
     : _window(nullptr, SDL_DestroyWindow), _renderer(nullptr, SDL_DestroyRenderer) {
   SDL_Window *window;
   SDL_Renderer *renderer;
-  if(!SDL_CreateWindowAndRenderer(title.c_str(), Display::WIDTH*SCALE, Display::HEIGHT*SCALE, 0,
+  if(!SDL_CreateWindowAndRenderer(title.c_str(), Display::FRAME_WIDTH*SCALE, Display::FRAME_HEIGHT*SCALE, 0,
                                   &window, &renderer)) {
     throw std::runtime_error(std::string("Could not open the window: ") + SDL_GetError());
   }
@@ -21,9 +21,9 @@ void Graphic::update(Display &display, bool force) {
   SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
   SDL_RenderClear(renderer);
   SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
-  for(int j = 0;j < Display::HEIGHT;j++) {
-    for(int i = 0;i < Display::WIDTH;i++) {
-      if(display.get(i, j)) {
+  for(int j = 0;j < Display::FRAME_HEIGHT;j++) {
+    for(int i = 0;i < Display::FRAME_WIDTH;i++) {
+      if(display.pixel(i, j)) {
         SDL_FRect rect = {float(i*SCALE), float(j*SCALE), float(SCALE), float(SCALE)};
         SDL_RenderFillRect(renderer, &rect);
       }

@@ -42,6 +42,8 @@ add_executable(chip8
   src/frontend/emulator.cc
   src/frontend/graphic.cc
   src/frontend/input.cc
+  src/frontend/layout.cc
+  src/frontend/settings.cc
   src/frontend/sound.cc
   src/frontend/terminal.cc
 )
@@ -64,7 +66,10 @@ if(CHIP8_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
   endif()
 
-  add_executable(chip8_test test/cpu_test.cc test/stack_test.cc)
+  # the settings file parser and terminal layout have no SDL dependency either
+  add_executable(chip8_test test/cpu_test.cc test/layout_test.cc test/settings_test.cc test/stack_test.cc
+                 src/frontend/layout.cc src/frontend/settings.cc)
+  target_include_directories(chip8_test PRIVATE src)
   target_link_libraries(chip8_test PRIVATE chip8_core GTest::gtest_main)
 
   include(GoogleTest)

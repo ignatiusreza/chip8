@@ -6,10 +6,11 @@
 #include <SDL3/SDL.h>
 #include "../core/display.h"
 
-// The emulator window, showing the 64x32 display scaled 10x.
+// The emulator window, showing the 128x64 frame scaled 5x, so low resolution pixels are
+// scaled 10x.
 class Graphic {
   public:
-    static constexpr int SCALE = 10;
+    static constexpr int SCALE = 5;
 
   private:
     std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> _window;

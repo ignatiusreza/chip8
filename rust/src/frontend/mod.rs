@@ -2,21 +2,21 @@
 //! speaker.
 
 mod input;
+mod layout;
+pub mod settings;
 mod sound;
 mod terminal;
 mod window;
 
 use std::str::FromStr;
 
-use chip8::{Cpu, Display};
+use chip8::{Cpu, Display, Quirks};
 use input::{Input, Keys};
 use sound::Sound;
 use terminal::Terminal;
 use window::Window;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-const OPCODES_PER_TICK: usize = 3;
 
 /// Where the display is shown and the keyboard read from.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -54,17 +54,28 @@ pub struct Emulator {
     input: Input,
     sound: Sound,
     screen: Box<dyn Screen>,
+    /// Opcodes run per frame.
+    speed: u32,
 }
 
 impl Emulator {
-    /// Loads the ROM, then opens the audio device and the screen.
-    pub fn new(title: &str, rom: &[u8], mode: DisplayMode) -> Result<Self> {
+    /// Loads the ROM, then opens the audio device and the screen. `how_to` is the ROM's
+    /// settings, whose how to play the terminal shows.
+    pub fn new(
+        title: &str,
+        rom: &[u8],
+        mode: DisplayMode,
+        quirks: Quirks,
+        speed: u32,
+        how_to: &settings::RomSettings,
+    ) -> Result<Self> {
         let mut cpu = Cpu::new();
+        cpu.set_quirks(quirks);
         cpu.load(rom)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
         let screen: Box<dyn Screen> = match mode {
-            DisplayMode::Terminal => Box::new(Terminal::new(title)?),
+            DisplayMode::Terminal => Box::new(Terminal::new(title, how_to)?),
             DisplayMode::Window => Box::new(Window::new(title)?),
         };
         Ok(Emulator {
@@ -72,6 +83,7 @@ impl Emulator {
             input: Input::default(),
             sound,
             screen,
+            speed,
         })
     }
 
@@ -80,7 +92,7 @@ impl Emulator {
         self.sound.set_playing(self.cpu.tick_timers());
         self.input.update(&self.screen.keys(), &mut self.cpu);
 
-        for _ in 0..OPCODES_PER_TICK {
+        for _ in 0..self.speed {
             self.cpu.step();
         }
 
