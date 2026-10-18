@@ -52,6 +52,7 @@ CPU::CPU() {
   memset(_flags, 0, sizeof(_flags));
   _waitForKey = false;
   _exited = false;
+  _waitForFrame = false;
 
   PC = PROGRAM_START;
   I  = 0;
@@ -66,7 +67,7 @@ bool Quirks::parse(const std::string &list, std::string &unknown) {
   std::string name;
   while(std::getline(names, name, ',')) {
     if(name == "none") *this = Quirks();
-    else if(name == "vip") { *this = Quirks(); shift = loadStore = vfReset = true; }
+    else if(name == "vip") { *this = Quirks(); shift = loadStore = vfReset = vblank = true; }
     else if(name == "schip") { *this = Quirks(); jump = true; }
     else if(name == "octo") { *this = Quirks(); shift = loadStore = wrap = true; }
     else if(name == "shift") shift = true;
@@ -74,6 +75,7 @@ bool Quirks::parse(const std::string &list, std::string &unknown) {
     else if(name == "vf-reset") vfReset = true;
     else if(name == "jump") jump = true;
     else if(name == "wrap") wrap = true;
+    else if(name == "vblank") vblank = true;
     else {
       unknown = name;
       return false;
@@ -91,6 +93,7 @@ bool CPU::load(const unsigned char *rom, std::size_t size) {
 }
 
 bool CPU::tickTimers() {
+  _waitForFrame = false;
   if(DT > 0) DT--;
   // the beeper plays for as long as the sound timer runs
   bool playing = ST > 0;
@@ -259,11 +262,12 @@ void CPU::_draw() {
       }
     }
   }
+  if(_quirks.vblank) _waitForFrame = true;
 }
 
 void CPU::step() {
-  // we're waiting for a keypress, or the program is done, don't advance..
-  if(_waitForKey || _exited) return;
+  // we're waiting for a keypress or the next frame, or the program is done, don't advance..
+  if(_waitForKey || _waitForFrame || _exited) return;
 
   opcode = (MEM(PC) << 8) | MEM(PC+1);
   switch(opcode & 0xF000) {

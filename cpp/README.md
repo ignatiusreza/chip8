@@ -24,8 +24,9 @@ then build with
     cmake --build build
 
 run the emulator in the terminal using "build/chip8 ROM", or in a window (the fancy GUI :P)
-using "build/chip8 --display window ROM", and pick the [quirks](../README.md#quirks) a ROM
-needs with e.g. "build/chip8 --quirks octo ROM",
+using "build/chip8 --display window ROM", and override the [quirks](../README.md#quirks) and
+[speed](../README.md#speed) a ROM's [settings](../README.md#rom-settings) ask for with e.g.
+"build/chip8 --quirks vip --speed 30 ROM",
 
 and run the tests with
 

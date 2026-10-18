@@ -70,19 +70,24 @@ type Quirks struct {
 	VFReset   bool // 8XY1/8XY2/8XY3 reset VF to 0
 	Jump      bool // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
 	Wrap      bool // sprites wrap around the screen edges, instead of being clipped
+	VBlank    bool // DXYN waits for the next frame, so at most one sprite is drawn per frame
 }
 
-// ParseQuirks parses a comma separated list of presets (none, vip, schip, octo), which set
-// every quirk, and quirk names (shift, load-store, vf-reset, jump, wrap), which turn one on,
-// applied from left to right.
+// ParseQuirks parses a quirk list (see Apply), starting from no quirks.
 func ParseQuirks(s string) (Quirks, error) {
-	var q Quirks
+	return Quirks{}.Apply(s)
+}
+
+// Apply applies a comma separated list of presets (none, vip, schip, octo), which set every
+// quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank), which turn one
+// on, from left to right.
+func (q Quirks) Apply(s string) (Quirks, error) {
 	for _, name := range strings.Split(s, ",") {
 		switch name {
 		case "none":
 			q = Quirks{}
 		case "vip":
-			q = Quirks{Shift: true, LoadStore: true, VFReset: true}
+			q = Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true}
 		case "schip":
 			q = Quirks{Jump: true}
 		case "octo":
@@ -97,8 +102,10 @@ func ParseQuirks(s string) (Quirks, error) {
 			q.Jump = true
 		case "wrap":
 			q.Wrap = true
+		case "vblank":
+			q.VBlank = true
 		default:
-			return Quirks{}, fmt.Errorf("unknown quirk %q, expected none, vip, schip, octo, shift, load-store, vf-reset, jump or wrap", name)
+			return Quirks{}, fmt.Errorf("unknown quirk %q, expected none, vip, schip, octo, shift, load-store, vf-reset, jump, wrap or vblank", name)
 		}
 	}
 	return q, nil
@@ -118,6 +125,8 @@ type CPU struct {
 	waitForKey int
 	// set by 00FD; execution halts for good
 	exited bool
+	// set by DXYN with the vblank quirk; execution halts until the next frame
+	waitForFrame bool
 	// the SUPER-CHIP RPL user flags (FX75/FX85)
 	flags  [16]byte
 	quirks Quirks
@@ -159,9 +168,10 @@ func (c *CPU) Display() *Display {
 	return c.display
 }
 
-// TickTimers decrements the delay and sound timers; call at 60Hz. It returns
-// true while the sound timer is active and a beep should be played.
+// TickTimers starts a frame, decrementing the delay and sound timers; call at 60Hz. It
+// returns true while the sound timer is active and a beep should be played.
 func (c *CPU) TickTimers() bool {
+	c.waitForFrame = false
 	if c.dt > 0 {
 		c.dt--
 	}
@@ -182,8 +192,8 @@ func (c *CPU) SetKey(key byte, pressed bool) {
 
 // Step fetches and executes a single opcode.
 func (c *CPU) Step() {
-	// we're waiting for a keypress, or the program is done, don't advance..
-	if c.waitForKey >= 0 || c.exited {
+	// we're waiting for a keypress or the next frame, or the program is done, don't advance..
+	if c.waitForKey >= 0 || c.waitForFrame || c.exited {
 		return
 	}
 
@@ -396,6 +406,7 @@ func (c *CPU) draw(x, y int, n byte) {
 			}
 		}
 	}
+	c.waitForFrame = c.quirks.VBlank
 }
 
 func (c *CPU) skipIf(cond bool) {

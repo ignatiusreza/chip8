@@ -269,7 +269,7 @@ func TestParseQuirks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect(t, "wrap,vip,jump", q, Quirks{Shift: true, LoadStore: true, VFReset: true, Jump: true})
+	expect(t, "wrap,vip,jump", q, Quirks{Shift: true, LoadStore: true, VFReset: true, VBlank: true, Jump: true})
 
 	if _, err := ParseQuirks("schip,bogus"); err == nil || !strings.Contains(err.Error(), `"bogus"`) {
 		t.Errorf("ParseQuirks(schip,bogus) error = %v, want one naming \"bogus\"", err)
@@ -299,6 +299,17 @@ func TestVFResetQuirk(t *testing.T) {
 	for _, op := range []uint16{0x8011, 0x8012, 0x8013} {
 		expect(t, "VF", runWith(t, Quirks{VFReset: true}, 0x6F05, op).v[0xF], 0)
 	}
+}
+
+func TestVBlankQuirkWaitsForTheNextFrame(t *testing.T) {
+	expect(t, "V0", run(t, 0xA000, 0xD001, 0x6001).v[0], 1)
+
+	c := runWith(t, Quirks{VBlank: true}, 0xA000, 0xD001, 0x6001)
+	expect(t, "V0", c.v[0], 0)
+	expect(t, "PC", c.pc, 0x204)
+	c.TickTimers()
+	c.Step()
+	expect(t, "V0", c.v[0], 1)
 }
 
 func TestJumpQuirkUsesVX(t *testing.T) {

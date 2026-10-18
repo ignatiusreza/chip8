@@ -249,7 +249,7 @@ TEST(CPUTest, ParseQuirks) {
 
   // presets reset the quirks named before them, single quirks add to them
   EXPECT_TRUE(quirks.parse("wrap,vip,jump", unknown));
-  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.vfReset && quirks.jump);
+  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.vfReset && quirks.vblank && quirks.jump);
   EXPECT_FALSE(quirks.wrap);
 
   EXPECT_FALSE(quirks.parse("schip,bogus", unknown));
@@ -297,6 +297,20 @@ TEST(CPUTest, JumpQuirkUsesVX) {
   quirks.jump = true;
   cpu = run({0x6004, 0x6302, 0xB300}, -1, quirks);
   EXPECT_EQ(cpu.pc(), 0x302);
+}
+
+TEST(CPUTest, VBlankQuirkWaitsForTheNextFrame) {
+  CPU cpu = run({0xA000, 0xD001, 0x6001});
+  EXPECT_EQ(cpu.v(0), 1);
+
+  Quirks quirks;
+  quirks.vblank = true;
+  cpu = run({0xA000, 0xD001, 0x6001}, -1, quirks);
+  EXPECT_EQ(cpu.v(0), 0);
+  EXPECT_EQ(cpu.pc(), 0x204);
+  cpu.tickTimers();
+  cpu.step();
+  EXPECT_EQ(cpu.v(0), 1);
 }
 
 TEST(CPUTest, WrapQuirkWrapsSprites) {

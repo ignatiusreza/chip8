@@ -8,10 +8,7 @@ import (
 	"github.com/ignatiusreza/chip8/go/chip8"
 )
 
-const (
-	tps            = 60
-	opcodesPerTick = 3
-)
+const tps = 60
 
 // Mode is where the display is shown and the keyboard read from.
 type Mode int
@@ -39,10 +36,12 @@ type Emulator struct {
 	sound *Sound
 	title string
 	mode  Mode
+	// opcodes run per frame
+	speed int
 }
 
 // New loads the ROM and sets up the audio device.
-func New(title string, rom []byte, mode Mode, quirks chip8.Quirks) (*Emulator, error) {
+func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int) (*Emulator, error) {
 	cpu := chip8.NewCPU()
 	cpu.SetQuirks(quirks)
 	if err := cpu.Load(rom); err != nil {
@@ -54,6 +53,7 @@ func New(title string, rom []byte, mode Mode, quirks chip8.Quirks) (*Emulator, e
 		sound: NewSound(),
 		title: title,
 		mode:  mode,
+		speed: speed,
 	}, nil
 }
 
@@ -75,7 +75,7 @@ func (e *Emulator) tick(keys Keys) bool {
 		return false
 	}
 
-	for range opcodesPerTick {
+	for range e.speed {
 		e.cpu.Step()
 	}
 	return true

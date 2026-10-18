@@ -2,7 +2,7 @@ chip8 (Rust)
 ============
 
 A Rust port of the C++ emulator in [`../cpp`](../cpp), keeping the same structure
-(CPU, display, keypad) and timing (3 opcodes per ~16ms tick). The call stack is a
+(CPU, display, keypad) and timing (opcodes run in batches every ~16ms tick). The call stack is a
 plain `Vec`, capped at 16 entries.
 
 The emulator core (`src/lib.rs`) has no windowing or audio dependency, so it can be
@@ -29,9 +29,10 @@ which draws in the terminal, or in a separate window with
 
     cargo run --release -- --display window ROM
 
-with the [quirks](../README.md#quirks) a ROM needs picked with e.g.
+overriding the [quirks](../README.md#quirks) and [speed](../README.md#speed) a ROM's
+[settings](../README.md#rom-settings) ask for with e.g.
 
-    cargo run --release -- --quirks octo ROM
+    cargo run --release -- --quirks vip --speed 30 ROM
 
 and the tests with
 

@@ -22,9 +22,10 @@ struct Quirks {
   bool vfReset = false;   // 8XY1/8XY2/8XY3 reset VF to 0
   bool jump = false;      // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
   bool wrap = false;      // sprites wrap around the screen edges, instead of being clipped
+  bool vblank = false;    // DXYN waits for the next frame, so at most one sprite is drawn per frame
 
   // applies a comma separated list of presets (none, vip, schip, octo), which set every
-  // quirk, and quirk names (shift, load-store, vf-reset, jump, wrap), which turn one on,
+  // quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank), which turn one on,
   // from left to right; returns false and sets `unknown` on a name it doesn't know
   bool parse(const std::string &list, std::string &unknown);
 };
@@ -42,6 +43,7 @@ class CPU {
   int temp;
   bool _waitForKey;
   bool _exited;
+  bool _waitForFrame;
 
   Stack   _stack;
   Display _display;
@@ -63,10 +65,11 @@ class CPU {
 
     void setQuirks(const Quirks &quirks) { _quirks = quirks; }
 
-    // runs the next opcode, unless waiting for a keypress (FX0A) or the program exited (00FD)
+    // runs the next opcode, unless waiting for a keypress (FX0A), the next frame (DXYN with
+    // the vblank quirk) or the program exited (00FD)
     void step();
 
-    // counts both timers down, once per 1/60s; returns whether the beeper should play
+    // starts a 1/60s frame, counting both timers down; returns whether the beeper should play
     bool tickTimers();
 
     // presses or releases a keypad key, 0x0 - 0xF

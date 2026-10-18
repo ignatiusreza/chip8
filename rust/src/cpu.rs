@@ -72,17 +72,17 @@ pub struct Quirks {
     pub jump: bool,
     /// Sprites wrap around the screen edges, instead of being clipped.
     pub wrap: bool,
+    /// DXYN waits for the next frame, so at most one sprite is drawn per frame.
+    pub vblank: bool,
 }
 
-/// Parses a comma separated list of presets (none, vip, schip, octo), which set every
-/// quirk, and quirk names (shift, load-store, vf-reset, jump, wrap), which turn one on,
-/// applied from left to right.
-impl std::str::FromStr for Quirks {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut quirks = Quirks::default();
-        for name in s.split(',') {
+impl Quirks {
+    /// Applies a comma separated list of presets (none, vip, schip, octo), which set
+    /// every quirk, and quirk names (shift, load-store, vf-reset, jump, wrap, vblank),
+    /// which turn one on, from left to right.
+    pub fn apply(self, list: &str) -> Result<Self, String> {
+        let mut quirks = self;
+        for name in list.split(',') {
             match name {
                 "none" => quirks = Quirks::default(),
                 "vip" => {
@@ -90,6 +90,7 @@ impl std::str::FromStr for Quirks {
                         shift: true,
                         load_store: true,
                         vf_reset: true,
+                        vblank: true,
                         ..Quirks::default()
                     }
                 }
@@ -112,14 +113,24 @@ impl std::str::FromStr for Quirks {
                 "vf-reset" => quirks.vf_reset = true,
                 "jump" => quirks.jump = true,
                 "wrap" => quirks.wrap = true,
+                "vblank" => quirks.vblank = true,
                 _ => {
                     return Err(format!(
-                        "unknown quirk {name:?}, expected none, vip, schip, octo, shift, load-store, vf-reset, jump or wrap"
+                        "unknown quirk {name:?}, expected none, vip, schip, octo, shift, load-store, vf-reset, jump, wrap or vblank"
                     ))
                 }
             }
         }
         Ok(quirks)
+    }
+}
+
+/// Parses a quirk list (see `Quirks::apply`), starting from no quirks.
+impl std::str::FromStr for Quirks {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Quirks::default().apply(s)
     }
 }
 
@@ -138,6 +149,8 @@ pub struct Cpu {
     wait_for_key: Option<usize>,
     /// Set by 00FD; execution halts for good.
     exited: bool,
+    /// Set by DXYN with the vblank quirk; execution halts until the next frame.
+    wait_for_frame: bool,
     /// The SUPER-CHIP RPL user flags (FX75/FX85).
     flags: [u8; 16],
     quirks: Quirks,
@@ -170,6 +183,7 @@ impl Cpu {
             keypad: Keypad::default(),
             wait_for_key: None,
             exited: false,
+            wait_for_frame: false,
             flags: [0; 16],
             quirks: Quirks::default(),
             // xorshift must not start at zero
@@ -204,9 +218,10 @@ impl Cpu {
         &mut self.display
     }
 
-    /// Decrements the delay and sound timers; call at 60Hz. Returns true
-    /// while the sound timer is active and a beep should be played.
+    /// Starts a frame, decrementing the delay and sound timers; call at 60Hz. Returns
+    /// true while the sound timer is active and a beep should be played.
     pub fn tick_timers(&mut self) -> bool {
+        self.wait_for_frame = false;
         self.dt = self.dt.saturating_sub(1);
         if self.st > 0 {
             self.st -= 1;
@@ -226,8 +241,8 @@ impl Cpu {
 
     /// Fetches and executes a single opcode.
     pub fn step(&mut self) {
-        // we're waiting for a keypress, or the program is done, don't advance..
-        if self.wait_for_key.is_some() || self.exited {
+        // we're waiting for a keypress or the next frame, or the program is done, don't advance..
+        if self.wait_for_key.is_some() || self.wait_for_frame || self.exited {
             return;
         }
 
@@ -418,6 +433,7 @@ impl Cpu {
                 }
             }
         }
+        self.wait_for_frame = self.quirks.vblank;
     }
 
     fn skip_if(&mut self, cond: bool) {
@@ -664,6 +680,7 @@ mod tests {
                 vf_reset: true,
                 jump: true,
                 wrap: false,
+                vblank: true,
             }
         );
 
@@ -709,6 +726,22 @@ mod tests {
         for op in [0x8011, 0x8012, 0x8013] {
             assert_eq!(run_with(quirks, &[0x6F05, op]).v[0xF], 0);
         }
+    }
+
+    #[test]
+    fn vblank_quirk_waits_for_the_next_frame() {
+        assert_eq!(run(&[0xA000, 0xD001, 0x6001]).v[0], 1);
+
+        let quirks = Quirks {
+            vblank: true,
+            ..Quirks::default()
+        };
+        let mut cpu = run_with(quirks, &[0xA000, 0xD001, 0x6001]);
+        assert_eq!(cpu.v[0], 0);
+        assert_eq!(cpu.pc, 0x204);
+        cpu.tick_timers();
+        cpu.step();
+        assert_eq!(cpu.v[0], 1);
     }
 
     #[test]

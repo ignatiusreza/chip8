@@ -19,6 +19,7 @@ class Emulator {
   // opened before the screen, as it may log to the terminal
   Sound   _sound;
   std::unique_ptr<Screen> _screen;
+  int     _speed;
 
   public:
     // opens the audio device and the screen; throws std::runtime_error if the screen
@@ -26,11 +27,13 @@ class Emulator {
     Emulator(const std::string &title, DisplayMode mode);
 
     void setQuirks(const Quirks &quirks) { _cpu.setQuirks(quirks); }
+    // sets how many opcodes run per frame
+    void setSpeed(int speed) { _speed = speed; }
 
     // copies the ROM into memory; returns false if it is too large
     bool load(const unsigned char *rom, std::size_t size) { return _cpu.load(rom, size); }
 
-    // runs one ~1/60s frame: timers, then 3 opcodes (handling input before each), then
+    // runs one ~1/60s frame: timers, then the opcodes (handling input before each), then
     // the screen
     void tick();
 

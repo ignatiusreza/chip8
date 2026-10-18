@@ -11,7 +11,8 @@ than one language.
 All three draw in the terminal they are started from by default, and can open a separate
 window instead with `--display window`.
 
-A few freely licensed (CC0) ROMs to try them with are in [`roms/`](roms/).
+Freely licensed (CC0) ROMs to try them with are in [`roms/`](roms/), each with the
+[settings](#rom-settings) it needs.
 
 SUPER-CHIP
 ----------
@@ -32,17 +33,13 @@ low resolution pixels, `DXY0` draws 16x16 sprites in either resolution, and a co
 same size; in the terminal, high resolution is drawn with braille characters, 2x4 pixels to a
 character, so it fits the same 66x19 terminal.
 
-Most SUPER-CHIP games expect to run much faster than the original interpreter, and the
-emulators only run 3 instructions per frame, so they can be sluggish.
-
 Quirks
 ------
 
 CHIP-8 interpreters disagree on a few instructions, and ROMs are written for one behaviour or
-the other. By default the emulators behave like SUPER-CHIP (except that `BNNN` jumps relative
-to `V0`); `--quirks` (`-quirks` in Go) switches to other behaviours with a comma separated list
-of presets and quirks, applied from left to right. A preset sets every quirk, a quirk name
-turns that one on:
+the other. `--quirks` (`-quirks` in Go) picks them with a comma separated list of presets and
+quirks, applied from left to right, starting from the default (`octo`). A preset sets every
+quirk, a quirk name turns that one on:
 
 | Quirk        | Behaviour                                                              |
 |--------------|------------------------------------------------------------------------|
@@ -51,16 +48,43 @@ turns that one on:
 | `vf-reset`   | `8XY1`/`8XY2`/`8XY3` reset `VF` to 0                                   |
 | `jump`       | `BNNN` jumps to `NNN + VX` (`X` being the top nibble), instead of `V0` |
 | `wrap`       | sprites wrap around the screen edges, instead of being clipped        |
+| `vblank`     | `DXYN` waits for the next frame, so at most one sprite is drawn per frame |
 
-| Preset  | Quirks                         | For ROMs written for                     |
-|---------|--------------------------------|------------------------------------------|
-| `none`  | -                              | the default behaviour                    |
-| `vip`   | `shift,load-store,vf-reset`    | the original COSMAC VIP interpreter      |
-| `schip` | `jump`                         | SUPER-CHIP 1.1                           |
-| `octo`  | `shift,load-store,wrap`        | [Octo](https://github.com/JohnEarnest/Octo)'s defaults, like most modern homebrew |
+| Preset  | Quirks                             | For ROMs written for                 |
+|---------|------------------------------------|--------------------------------------|
+| `octo`  | `shift,load-store,wrap`            | [Octo](https://github.com/JohnEarnest/Octo)'s defaults, like most modern homebrew (the default) |
+| `vip`   | `shift,load-store,vf-reset,vblank` | the original COSMAC VIP interpreter  |
+| `schip` | `jump`                             | SUPER-CHIP 1.1                       |
+| `none`  | -                                  | SUPER-CHIP, but with `BNNN` relative to `V0` |
 
-For example `--quirks octo`, or `--quirks vip,wrap`. The original VIP also waits for the next
-frame before drawing a sprite, which isn't emulated.
+For example `--quirks vip`, `--quirks vf-reset` (`octo` plus `vf-reset`) or
+`--quirks none,shift`.
+
+`octo` is the default as it runs the most programs: of the 76 CHIP-8 and SUPER-CHIP programs in
+the [Chip8 Community Archive](https://github.com/JohnEarnest/chip8Archive), 71 were made for
+its `shift`, `load-store`, `jump` and `vf-reset` behaviour and 67 for its `wrap`. Its `shift`
+and `load-store` are also what the original COSMAC VIP did, which most classic ROMs rely on.
+
+Speed
+-----
+
+`--speed N` (`-speed` in Go) sets how many opcodes run per 1/60s frame. It defaults to 15 (900
+per second): about half of the archive's programs ask for that or less, but SUPER-CHIP games
+often want 100 or more.
+
+ROM settings
+------------
+
+Without `--quirks` or `--speed`, the emulators read them from the ROM's settings file, if it
+has one: the ROM's path with its extension replaced by `.cfg`, e.g. `roms/dinorun.cfg` for
+`roms/dinorun.ch8`. Each line sets `quirks` (a list like `--quirks`) or `speed`, and lines
+starting with `#` are comments:
+
+    # Dino Run by Andrezinrc, from the Chip8 Community Archive
+    quirks = vip
+
+A setting that isn't given uses the default, so a ROM that runs well with the defaults needs
+no file.
 
 References for the bytecodes used is from :
 

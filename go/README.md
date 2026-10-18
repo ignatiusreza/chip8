@@ -2,7 +2,7 @@ chip8 (Go)
 ==========
 
 A Go port of the same emulator as [`../cpp`](../cpp) and [`../rust`](../rust), keeping the
-same structure (CPU, display, keypad) and timing (3 opcodes per 1/60s tick). The call
+same structure (CPU, display, keypad) and timing (opcodes run in batches every 1/60s tick). The call
 stack is a plain slice, capped at 16 entries.
 
 The emulator core (package [`chip8`](chip8)) has no windowing or audio dependency, so it
@@ -29,9 +29,10 @@ which draws in the terminal, or in a separate window with
 
     go run . -display window ROM
 
-with the [quirks](../README.md#quirks) a ROM needs picked with e.g.
+overriding the [quirks](../README.md#quirks) and [speed](../README.md#speed) a ROM's
+[settings](../README.md#rom-settings) ask for with e.g.
 
-    go run . -quirks octo ROM
+    go run . -quirks vip -speed 30 ROM
 
 and the tests with
 
