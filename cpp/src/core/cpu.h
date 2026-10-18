@@ -48,6 +48,8 @@ class CPU {
   unsigned short opcode, I;
   int temp;
   bool _waitForKey;
+  // the key pressed while waiting for one (FX0A), or -1; FX0A stores it once it's released
+  int _keyDown;
   bool _exited;
   bool _waitForFrame;
 
