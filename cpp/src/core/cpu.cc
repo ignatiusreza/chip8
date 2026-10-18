@@ -32,10 +32,26 @@ CPU::CPU() {
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80  // F
   };
+  // and the SUPER-CHIP big font at 0x050 - 0x0B4
+  unsigned char bigFont[] = {
+    0x3C, 0x7E, 0xE7, 0xC3, 0xC3, 0xC3, 0xC3, 0xE7, 0x7E, 0x3C, // 0
+    0x18, 0x38, 0x58, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, // 1
+    0x3E, 0x7F, 0xC3, 0x06, 0x0C, 0x18, 0x30, 0x60, 0xFF, 0xFF, // 2
+    0x3C, 0x7E, 0xC3, 0x03, 0x0E, 0x0E, 0x03, 0xC3, 0x7E, 0x3C, // 3
+    0x06, 0x0E, 0x1E, 0x36, 0x66, 0xC6, 0xFF, 0xFF, 0x06, 0x06, // 4
+    0xFF, 0xFF, 0xC0, 0xC0, 0xFC, 0xFE, 0x03, 0xC3, 0x7E, 0x3C, // 5
+    0x3E, 0x7C, 0xE0, 0xC0, 0xFC, 0xFE, 0xC3, 0xC3, 0x7E, 0x3C, // 6
+    0xFF, 0xFF, 0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x60, 0x60, // 7
+    0x3C, 0x7E, 0xC3, 0xC3, 0x7E, 0x7E, 0xC3, 0xC3, 0x7E, 0x3C, // 8
+    0x3C, 0x7E, 0xC3, 0xC3, 0x7F, 0x3F, 0x03, 0x03, 0x3E, 0x7C  // 9
+  };
   memset(_memory, 0, sizeof(_memory));
   memcpy(_memory, font, sizeof(font));
+  memcpy(&_memory[BIG_FONT_START], bigFont, sizeof(bigFont));
   memset(V, 0, sizeof(V));
+  memset(_flags, 0, sizeof(_flags));
   _waitForKey = false;
+  _exited = false;
 
   PC = PROGRAM_START;
   I  = 0;
@@ -90,6 +106,33 @@ void CPU::setKey(int key, bool pressed) {
   if(_waitForKey && pressed) {
     V[_keyBuff] = key;
     _waitForKey = false;
+  }
+}
+
+void CPU::_x0000() {
+  if((opcode & 0xFFF0) == 0x00C0) { // 00CN (scroll down N pixels)
+    _display.scrollDown(N);
+  } else switch(opcode) {
+    case 0x00E0: // clear screen
+      _display.clearScreen();
+      break;
+    case 0x00FB: // scroll right 4 pixels
+      _display.scrollRight(4);
+      break;
+    case 0x00FC: // scroll left 4 pixels
+      _display.scrollLeft(4);
+      break;
+    case 0x00FD: // exit the interpreter
+      _exited = true;
+      break;
+    case 0x00FE: // low resolution
+      _display.setHires(false);
+      break;
+    case 0x00FF: // high resolution
+      _display.setHires(true);
+      break;
+    default: // 0NNN (machine code routine) is unsupported, skip it
+      break;
   }
 }
 
@@ -167,6 +210,9 @@ void CPU::_xF000() {
     case 0x0029: // FX29 ( I = location of font for value of V[X] )
       I = (V[X] & 0xF) * FONT_BYTE_LENGTH;
       break;
+    case 0x0030: // FX30 ( I = location of big font for value of V[X] )
+      I = BIG_FONT_START + (V[X] & 0xF) * BIG_FONT_BYTE_LENGTH;
+      break;
     case 0x0033: // FX33 ( I[0..2] = BCD(VX) )
       MEM(I) = V[X] / 100;
       MEM(I+1) = (V[X] / 10) % 10;
@@ -180,12 +226,44 @@ void CPU::_xF000() {
       for(int i = 0;i <= X;i++) V[i] = MEM(I + i);
       if(_quirks.loadStore) I += X + 1;
       break;
+    case 0x0075: // FX75 ( flags[0..X] = V0..VX )
+      for(int i = 0;i <= X;i++) _flags[i] = V[i];
+      break;
+    case 0x0085: // FX85 ( V0..VX = flags[0..X] )
+      for(int i = 0;i <= X;i++) V[i] = _flags[i];
+      break;
+  }
+}
+
+// DXYN (draw an 8xN sprite from memory at I to (VX, VY), VF = collision), or DXY0 (a
+// 16x16 sprite, two bytes per row)
+void CPU::_draw() {
+  // read the coordinates before VF is reset, as VX or VY may be VF; the start
+  // position wraps around the screen, and the sprite is clipped at its edges, or
+  // wraps too with the wrap quirk
+  int width = _display.width(), height = _display.height();
+  int x = VX % width;
+  int y = VY % height;
+  int columns = N == 0 ? 16 : 8, rows = N == 0 ? 16 : N;
+
+  V[0xF] = 0; // Reset collision flag
+  for(int yline = 0; yline < rows; yline++) {
+    // the pixels of a row, leftmost in the highest bit
+    int data = columns == 16 ? (MEM(I + yline*2) << 8) | MEM(I + yline*2 + 1) : MEM(I + yline);
+    for(int xpix = 0; xpix < columns; xpix++) {
+      if((data & (1 << (columns - 1 - xpix))) != 0) {
+        int px = x + xpix, py = y + yline;
+        if(_quirks.wrap) { px %= width; py %= height; }
+        if(_display.get(px, py)) V[0xF] = 1; //there has been a collision
+        _display.flip(px, py);
+      }
+    }
   }
 }
 
 void CPU::step() {
-  // we're waiting for a keypress, don't advance..
-  if(_waitForKey) return;
+  // we're waiting for a keypress, or the program is done, don't advance..
+  if(_waitForKey || _exited) return;
 
   opcode = (MEM(PC) << 8) | MEM(PC+1);
   switch(opcode & 0xF000) {
@@ -193,10 +271,8 @@ void CPU::step() {
       if(opcode == 0x00EE) { // return from a subroutine
         // with nothing to return to, restart the program rather than run the font data
         PC = _stack.empty() ? PROGRAM_START : _stack.pop();
-      }else if(opcode == 0x00E0) { // clear screen
-        _display.clearScreen();
-        PC += 2;
-      }else { // 0NNN (machine code routine) is unsupported, skip it
+      }else {
+        _x0000();
         PC += 2;
       }
       break;
@@ -256,28 +332,10 @@ void CPU::step() {
       VX = rand() & NN;
       PC += 2;
       break;
-    case 0xD000: { // DXYN	(Draw Sprite @(VX, VY) with dimension Nx8, with data from memory at location I )
-      // read the coordinates before VF is reset, as VX or VY may be VF; the start
-      // position wraps around the screen, and the sprite is clipped at its edges, or
-      // wraps too with the wrap quirk
-      int x = VX % Display::WIDTH;
-      int y = VY % Display::HEIGHT;
-
-      V[0xF] = 0; // Reset collision flag
-      for (int yline = 0; yline < N; yline++){
-        data = MEM(I + yline); //this retreives the byte for a given line of pixels
-        for(int xpix = 0; xpix < 8; xpix++){
-          if ((data & (0x80 >> xpix)) != 0){
-            int px = x + xpix, py = y + yline;
-            if (_quirks.wrap) { px %= Display::WIDTH; py %= Display::HEIGHT; }
-            if (_display.get(px, py)) V[0xF] = 1; //there has been a collision
-            _display.flip(px, py);
-          }
-        }
-      }
+    case 0xD000:
+      _draw();
       PC += 2;
       break;
-    }
     case 0xE000:
       switch(opcode & 0xFF) {
         // only the lowest nibble of VX selects the key

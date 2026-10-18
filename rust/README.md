@@ -40,13 +40,13 @@ and the tests with
 Differences from the C++ version
 --------------------------------
 
-By default the display is drawn in the terminal, as 64x16 half-block characters inside a
-border, which needs a terminal of at least 66x19. Most terminals only report key presses
+By default the display is drawn in the terminal, as 64x16 half-block characters (braille in
+the SUPER-CHIP high resolution) inside a border, which needs a terminal of at least 66x19. Most terminals only report key presses
 (repeated while held), not releases, so a key counts as held for 200ms after its last
 press. Terminals that support the
 [kitty keyboard protocol](https://sw.kovidgoyal.net/kitty/keyboard-protocol/) (kitty,
 WezTerm, foot, Ghostty, recent Alacritty...) also report releases, and are used for exact
 key state.
 
-The window is scaled 8x (512x256) rather than 10x, since minifb only supports
-power-of-two scales. If no audio device is available the emulator runs without sound.
+The window is 512x256 (low resolution pixels scaled 8x) rather than 640x320, since minifb
+only supports power-of-two scales. If no audio device is available the emulator runs without sound.

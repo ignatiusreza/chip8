@@ -316,3 +316,90 @@ TEST(CPUTest, WrapQuirkWrapsSprites) {
   EXPECT_TRUE(cpu.display().get(62, 0));
   EXPECT_TRUE(cpu.display().get(1, 0));
 }
+
+TEST(CPUTest, HighResolution) {
+  CPU cpu = run({0x00FF});
+  EXPECT_TRUE(cpu.display().hires());
+  EXPECT_EQ(cpu.display().width(), 128);
+  EXPECT_EQ(cpu.display().height(), 64);
+
+  // font "0" at (100, 50) is only on screen in high resolution
+  cpu = run({0x00FF, 0x6064, 0x6132, 0xA000, 0xD015});
+  EXPECT_TRUE(cpu.display().get(100, 50));
+  EXPECT_TRUE(cpu.display().pixel(100, 50));
+  EXPECT_FALSE(cpu.display().pixel(101, 51));
+
+  // switching back clears the screen, and low resolution pixels cover 2x2 frame pixels
+  cpu = run({0x00FF, 0xA000, 0xD015, 0x00FE, 0xD011});
+  EXPECT_FALSE(cpu.display().hires());
+  EXPECT_EQ(cpu.display().width(), 64);
+  EXPECT_TRUE(cpu.display().get(3, 0));
+  EXPECT_TRUE(cpu.display().pixel(7, 1));
+  EXPECT_FALSE(cpu.display().get(0, 1));
+}
+
+TEST(CPUTest, DrawLargeSprite) {
+  // a 16x16 sprite of 0xFF00 rows from 0x300, at (120, 60) in high resolution, clipped
+  // at the edges, then drawn again
+  std::vector<unsigned char> rom = assemble({0x00FF, 0x6078, 0x613C, 0xA300, 0xD010, 0xD010});
+  rom.resize(0x100);
+  for(int row = 0; row < 16; row++) rom.insert(rom.end(), {0xFF, 0x00});
+  CPU cpu;
+  ASSERT_TRUE(cpu.load(rom.data(), rom.size()));
+  for(int i = 0; i < 5; i++) cpu.step();
+  EXPECT_TRUE(cpu.display().get(120, 60));
+  EXPECT_TRUE(cpu.display().get(127, 63));
+  EXPECT_FALSE(cpu.display().get(0, 60));
+  EXPECT_FALSE(cpu.display().get(120, 0));
+  EXPECT_EQ(cpu.v(0xF), 0);
+
+  cpu.step();
+  EXPECT_FALSE(cpu.display().get(120, 60));
+  EXPECT_EQ(cpu.v(0xF), 1);
+}
+
+TEST(CPUTest, Scroll) {
+  // the top row of font "0" (4 pixels) at (8, 0)
+  CPU cpu = run({0x6008, 0x6100, 0xA000, 0xD011, 0x00C3});
+  EXPECT_FALSE(cpu.display().get(8, 0));
+  EXPECT_TRUE(cpu.display().get(8, 3));
+
+  cpu = run({0x6008, 0x6100, 0xA000, 0xD011, 0x00FB});
+  EXPECT_FALSE(cpu.display().get(8, 0));
+  EXPECT_TRUE(cpu.display().get(12, 0));
+  EXPECT_TRUE(cpu.display().get(15, 0));
+
+  cpu = run({0x6008, 0x6100, 0xA000, 0xD011, 0x00FC});
+  EXPECT_TRUE(cpu.display().get(4, 0));
+  EXPECT_FALSE(cpu.display().get(8, 0));
+
+  // pixels scrolled off the screen are gone
+  cpu = run({0x6000, 0x6100, 0xA000, 0xD011, 0x00FC, 0x00FB});
+  EXPECT_FALSE(cpu.display().get(0, 0));
+  EXPECT_FALSE(cpu.display().get(4, 0));
+
+  // in high resolution, scrolling is by high resolution pixels
+  cpu = run({0x00FF, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB, 0x00C1});
+  EXPECT_TRUE(cpu.display().get(12, 1));
+  EXPECT_FALSE(cpu.display().get(11, 1));
+}
+
+TEST(CPUTest, BigFont) {
+  CPU cpu = run({0x6007, 0xF030});
+  EXPECT_EQ(cpu.index(), BIG_FONT_START + 7 * BIG_FONT_BYTE_LENGTH);
+  EXPECT_EQ(cpu.memory(cpu.index()), 0xFF); // the top of the 7
+}
+
+TEST(CPUTest, SaveAndRestoreFlags) {
+  CPU cpu = run({0x6001, 0x6102, 0x6203, 0xF275, 0x6000, 0x6100, 0x6200, 0xF185});
+  EXPECT_EQ(cpu.v(0), 1);
+  EXPECT_EQ(cpu.v(1), 2);
+  EXPECT_EQ(cpu.v(2), 0);
+}
+
+TEST(CPUTest, Exit) {
+  CPU cpu = run({0x00FD, 0x6001}, 2);
+  EXPECT_TRUE(cpu.exited());
+  EXPECT_EQ(cpu.pc(), 0x202);
+  EXPECT_EQ(cpu.v(0), 0);
+}

@@ -13,6 +13,10 @@ const (
 	StackDepth     = 16
 	fontByteLength = 5
 	addrMask       = MemorySize - 1
+
+	// the SUPER-CHIP 8x10 font for the digits 0-9 (FX30) follows the 4x5 font
+	BigFontStart      = 0x50
+	BigFontByteLength = 10
 )
 
 // store font data at 0x000 - 0x050
@@ -33,6 +37,20 @@ var font = [80]byte{
 	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
 	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 	0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+}
+
+// and the SUPER-CHIP big font at 0x050 - 0x0B4
+var bigFont = [100]byte{
+	0x3C, 0x7E, 0xE7, 0xC3, 0xC3, 0xC3, 0xC3, 0xE7, 0x7E, 0x3C, // 0
+	0x18, 0x38, 0x58, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, // 1
+	0x3E, 0x7F, 0xC3, 0x06, 0x0C, 0x18, 0x30, 0x60, 0xFF, 0xFF, // 2
+	0x3C, 0x7E, 0xC3, 0x03, 0x0E, 0x0E, 0x03, 0xC3, 0x7E, 0x3C, // 3
+	0x06, 0x0E, 0x1E, 0x36, 0x66, 0xC6, 0xFF, 0xFF, 0x06, 0x06, // 4
+	0xFF, 0xFF, 0xC0, 0xC0, 0xFC, 0xFE, 0x03, 0xC3, 0x7E, 0x3C, // 5
+	0x3E, 0x7C, 0xE0, 0xC0, 0xFC, 0xFE, 0xC3, 0xC3, 0x7E, 0x3C, // 6
+	0xFF, 0xFF, 0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x60, 0x60, // 7
+	0x3C, 0x7E, 0xC3, 0xC3, 0x7E, 0x7E, 0xC3, 0xC3, 0x7E, 0x3C, // 8
+	0x3C, 0x7E, 0xC3, 0xC3, 0x7F, 0x3F, 0x03, 0x03, 0x3E, 0x7C, // 9
 }
 
 // RomTooLargeError is returned by Load when a ROM doesn't fit in program memory.
@@ -98,8 +116,12 @@ type CPU struct {
 	keypad  Keypad
 	// register waiting for a keypress (FX0A), or -1; execution halts until it's set
 	waitForKey int
-	quirks     Quirks
-	random     func() byte
+	// set by 00FD; execution halts for good
+	exited bool
+	// the SUPER-CHIP RPL user flags (FX75/FX85)
+	flags  [16]byte
+	quirks Quirks
+	random func() byte
 }
 
 func NewCPU() *CPU {
@@ -111,6 +133,7 @@ func NewCPU() *CPU {
 		random:     func() byte { return byte(rand.Uint32()) },
 	}
 	copy(c.memory[:], font[:])
+	copy(c.memory[BigFontStart:], bigFont[:])
 	return c
 }
 
@@ -125,6 +148,11 @@ func (c *CPU) Load(rom []byte) error {
 
 func (c *CPU) SetQuirks(q Quirks) {
 	c.quirks = q
+}
+
+// Exited reports whether the program exited (00FD).
+func (c *CPU) Exited() bool {
+	return c.exited
 }
 
 func (c *CPU) Display() *Display {
@@ -154,8 +182,8 @@ func (c *CPU) SetKey(key byte, pressed bool) {
 
 // Step fetches and executes a single opcode.
 func (c *CPU) Step() {
-	// we're waiting for a keypress, don't advance..
-	if c.waitForKey >= 0 {
+	// we're waiting for a keypress, or the program is done, don't advance..
+	if c.waitForKey >= 0 || c.exited {
 		return
 	}
 
@@ -173,16 +201,28 @@ func (c *CPU) execute(opcode uint16) {
 
 	switch opcode & 0xF000 {
 	case 0x0000:
-		switch opcode {
-		case 0x00E0: // clear screen
+		switch {
+		case opcode&0xFFF0 == 0x00C0: // 00CN (scroll down N pixels)
+			c.display.ScrollDown(int(n))
+		case opcode == 0x00E0: // clear screen
 			c.display.Clear()
-		case 0x00EE: // return from a subroutine
+		case opcode == 0x00EE: // return from a subroutine
 			if len(c.stack) == 0 {
 				c.pc = ProgramStart
 			} else {
 				c.pc = c.stack[len(c.stack)-1]
 				c.stack = c.stack[:len(c.stack)-1]
 			}
+		case opcode == 0x00FB: // scroll right 4 pixels
+			c.display.ScrollRight(4)
+		case opcode == 0x00FC: // scroll left 4 pixels
+			c.display.ScrollLeft(4)
+		case opcode == 0x00FD: // exit the interpreter
+			c.exited = true
+		case opcode == 0x00FE: // low resolution
+			c.display.SetHires(false)
+		case opcode == 0x00FF: // high resolution
+			c.display.SetHires(true)
 		default: // 0NNN (machine code routine) is unsupported
 		}
 	case 0x1000: // 1NNN (jump to NNN)
@@ -291,6 +331,8 @@ func (c *CPU) xF000(x int, nn byte) {
 		c.i += uint16(c.v[x])
 	case 0x29: // FX29 (I = location of font for value of VX)
 		c.i = uint16(c.v[x]&0xF) * fontByteLength
+	case 0x30: // FX30 (I = location of big font for value of VX)
+		c.i = BigFontStart + uint16(c.v[x]&0xF)*BigFontByteLength
 	case 0x33: // FX33 (I[0..2] = BCD(VX))
 		vx := c.v[x]
 		c.memory[i&addrMask] = vx / 100
@@ -306,6 +348,10 @@ func (c *CPU) xF000(x int, nn byte) {
 			c.v[r] = c.memory[(i+uint16(r))&addrMask]
 		}
 		c.advanceI(x)
+	case 0x75: // FX75 (flags[0..X] = V0..VX)
+		copy(c.flags[:x+1], c.v[:x+1])
+	case 0x85: // FX85 (V0..VX = flags[0..X])
+		copy(c.v[:x+1], c.flags[:x+1])
 	}
 }
 
@@ -316,19 +362,32 @@ func (c *CPU) advanceI(x int) {
 	}
 }
 
-// draw implements DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision.
+// draw implements DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision,
+// or DXY0: a 16x16 sprite, two bytes per row.
 // The start position wraps around the screen, and the sprite is clipped at its edges, or
 // wraps too with the wrap quirk.
 func (c *CPU) draw(x, y int, n byte) {
-	vx, vy := int(c.v[x])%Width, int(c.v[y])%Height
+	width, height := c.display.Width(), c.display.Height()
+	vx, vy := int(c.v[x])%width, int(c.v[y])%height
+	columns, rows := 8, int(n)
+	if n == 0 {
+		columns, rows = 16, 16
+	}
 	c.v[0xF] = 0
-	for yline := 0; yline < int(n); yline++ {
-		data := c.memory[(c.i+uint16(yline))&addrMask]
-		for xpix := 0; xpix < 8; xpix++ {
-			if data&(0x80>>xpix) != 0 {
+	for yline := range rows {
+		// the pixels of a row, leftmost in the highest bit
+		var data uint16
+		if columns == 16 {
+			at := c.i + uint16(yline*2)
+			data = uint16(c.memory[at&addrMask])<<8 | uint16(c.memory[(at+1)&addrMask])
+		} else {
+			data = uint16(c.memory[(c.i+uint16(yline))&addrMask])
+		}
+		for xpix := range columns {
+			if data&(1<<(columns-1-xpix)) != 0 {
 				px, py := vx+xpix, vy+yline
 				if c.quirks.Wrap {
-					px, py = px%Width, py%Height
+					px, py = px%width, py%height
 				}
 				if c.display.Get(px, py) {
 					c.v[0xF] = 1

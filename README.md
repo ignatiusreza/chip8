@@ -1,7 +1,8 @@
 chip8
 =====
 
-A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) emulator, implemented in more than one language.
+A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) and SUPER-CHIP emulator, implemented in more
+than one language.
 
 - [`cpp/`](cpp/) - the original C++ implementation (SDL3, googletest)
 - [`rust/`](rust/) - a port of the same emulator to Rust (crossterm, minifb, rodio)
@@ -11,6 +12,28 @@ All three draw in the terminal they are started from by default, and can open a 
 window instead with `--display window`.
 
 A few freely licensed (CC0) ROMs to try them with are in [`roms/`](roms/).
+
+SUPER-CHIP
+----------
+
+Besides the original instruction set, the emulators run the
+[SUPER-CHIP 1.1](http://devernay.free.fr/hacks/chip8/schip.txt) instructions:
+
+- `00FF` / `00FE` switch to the 128x64 high resolution and back to 64x32, clearing the screen
+- `00CN` scrolls down N pixels, `00FB` / `00FC` scroll right / left 4 pixels
+- `DXY0` draws a 16x16 sprite, two bytes per row
+- `FX30` points `I` at the 8x10 font for the digit in `VX`
+- `FX75` / `FX85` save and restore `V0`..`VX` to the user flags (kept until the emulator quits)
+- `00FD` exits, which stops the program, leaving the screen as it was
+
+Like in [Octo](https://github.com/JohnEarnest/Octo), scrolling in low resolution moves whole
+low resolution pixels, `DXY0` draws 16x16 sprites in either resolution, and a collision sets
+`VF` to 1 rather than counting the colliding rows. The window shows both resolutions at the
+same size; in the terminal, high resolution is drawn with braille characters, 2x4 pixels to a
+character, so it fits the same 66x19 terminal.
+
+Most SUPER-CHIP games expect to run much faster than the original interpreter, and the
+emulators only run 3 instructions per frame, so they can be sluggish.
 
 Quirks
 ------

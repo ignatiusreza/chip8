@@ -32,8 +32,36 @@ const KEYMAP: [char; 16] = [
 ];
 
 // the display plus a one character border, and a title line above it
-const COLUMNS: u16 = Display::WIDTH as u16 + 2;
-const ROWS: u16 = Display::HEIGHT as u16 / 2 + 3;
+// a character cell holds 2x2 low resolution pixels, or 2x4 high resolution ones
+const CELLS_WIDE: usize = Display::FRAME_WIDTH / 2;
+const CELLS_HIGH: usize = Display::FRAME_HEIGHT / 4;
+const COLUMNS: u16 = CELLS_WIDE as u16 + 2;
+const ROWS: u16 = CELLS_HIGH as u16 + 3;
+
+/// The braille character showing the 2x4 high resolution pixels at (x, y).
+fn braille(display: &Display, x: usize, y: usize) -> char {
+    // the bit of each dot, by column then row
+    const DOTS: [[u32; 4]; 2] = [[0x01, 0x02, 0x04, 0x40], [0x08, 0x10, 0x20, 0x80]];
+    let mut bits = 0;
+    for (dx, column) in DOTS.iter().enumerate() {
+        for (dy, bit) in column.iter().enumerate() {
+            if display.pixel(x + dx, y + dy) {
+                bits |= bit;
+            }
+        }
+    }
+    char::from_u32(0x2800 + bits).unwrap_or(' ')
+}
+
+/// The half block showing two low resolution pixels, one above the other.
+fn half_block(display: &Display, x: usize, y: usize) -> char {
+    match (display.get(x, y), display.get(x, y + 1)) {
+        (true, true) => '█',
+        (true, false) => '▀',
+        (false, true) => '▄',
+        (false, false) => ' ',
+    }
+}
 
 /// The terminal the emulator was started from, showing the 64x32 display as 64x16
 /// half-block characters and reading the keyboard.
@@ -126,24 +154,22 @@ impl Terminal {
 
         write!(self.out, "{} (Esc to quit)", self.title)?;
         queue!(self.out, MoveTo(0, 1))?;
-        write!(self.out, "┌{}┐", "─".repeat(Display::WIDTH))?;
-        // each character cell holds two pixels, one above the other
-        for row in 0..Display::HEIGHT / 2 {
+        write!(self.out, "┌{}┐", "─".repeat(CELLS_WIDE))?;
+        for row in 0..CELLS_HIGH {
             queue!(self.out, MoveTo(0, row as u16 + 2))?;
-            let line: String = (0..Display::WIDTH)
-                .map(
-                    |x| match (display.get(x, row * 2), display.get(x, row * 2 + 1)) {
-                        (true, true) => '█',
-                        (true, false) => '▀',
-                        (false, true) => '▄',
-                        (false, false) => ' ',
-                    },
-                )
+            let line: String = (0..CELLS_WIDE)
+                .map(|col| {
+                    if display.hires() {
+                        braille(display, col * 2, row * 4)
+                    } else {
+                        half_block(display, col, row * 2)
+                    }
+                })
                 .collect();
             write!(self.out, "│{line}│")?;
         }
         queue!(self.out, MoveTo(0, ROWS - 1))?;
-        write!(self.out, "└{}┘", "─".repeat(Display::WIDTH))?;
+        write!(self.out, "└{}┘", "─".repeat(CELLS_WIDE))?;
         self.out.flush()
     }
 }

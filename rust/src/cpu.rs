@@ -4,6 +4,9 @@ pub const MEMORY_SIZE: usize = 0x1000;
 pub const PROGRAM_START: u16 = 0x200;
 pub const STACK_DEPTH: usize = 16;
 const FONT_BYTE_LENGTH: u16 = 5;
+/// The SUPER-CHIP 8x10 font for the digits 0-9 (FX30) follows the 4x5 font.
+pub const BIG_FONT_START: u16 = 0x50;
+pub const BIG_FONT_BYTE_LENGTH: u16 = 10;
 
 // store font data at 0x000 - 0x050
 const FONT: [u8; 80] = [
@@ -23,6 +26,20 @@ const FONT: [u8; 80] = [
     0xE0, 0x90, 0x90, 0x90, 0xE0, // D
     0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
     0xF0, 0x80, 0xF0, 0x80, 0x80, // F
+];
+
+// and the SUPER-CHIP big font at 0x050 - 0x0B4
+const BIG_FONT: [u8; 100] = [
+    0x3C, 0x7E, 0xE7, 0xC3, 0xC3, 0xC3, 0xC3, 0xE7, 0x7E, 0x3C, // 0
+    0x18, 0x38, 0x58, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, // 1
+    0x3E, 0x7F, 0xC3, 0x06, 0x0C, 0x18, 0x30, 0x60, 0xFF, 0xFF, // 2
+    0x3C, 0x7E, 0xC3, 0x03, 0x0E, 0x0E, 0x03, 0xC3, 0x7E, 0x3C, // 3
+    0x06, 0x0E, 0x1E, 0x36, 0x66, 0xC6, 0xFF, 0xFF, 0x06, 0x06, // 4
+    0xFF, 0xFF, 0xC0, 0xC0, 0xFC, 0xFE, 0x03, 0xC3, 0x7E, 0x3C, // 5
+    0x3E, 0x7C, 0xE0, 0xC0, 0xFC, 0xFE, 0xC3, 0xC3, 0x7E, 0x3C, // 6
+    0xFF, 0xFF, 0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x60, 0x60, // 7
+    0x3C, 0x7E, 0xC3, 0xC3, 0x7E, 0x7E, 0xC3, 0xC3, 0x7E, 0x3C, // 8
+    0x3C, 0x7E, 0xC3, 0xC3, 0x7F, 0x3F, 0x03, 0x03, 0x3E, 0x7C, // 9
 ];
 
 #[derive(Debug, PartialEq, Eq)]
@@ -119,6 +136,10 @@ pub struct Cpu {
     keypad: Keypad,
     /// Register waiting for a keypress (FX0A); execution halts until it's set.
     wait_for_key: Option<usize>,
+    /// Set by 00FD; execution halts for good.
+    exited: bool,
+    /// The SUPER-CHIP RPL user flags (FX75/FX85).
+    flags: [u8; 16],
     quirks: Quirks,
     rng: u32,
 }
@@ -135,6 +156,8 @@ impl Cpu {
     pub fn with_seed(seed: u32) -> Self {
         let mut memory = [0; MEMORY_SIZE];
         memory[..FONT.len()].copy_from_slice(&FONT);
+        let big_font = BIG_FONT_START as usize;
+        memory[big_font..big_font + BIG_FONT.len()].copy_from_slice(&BIG_FONT);
         Cpu {
             v: [0; 16],
             i: 0,
@@ -146,6 +169,8 @@ impl Cpu {
             display: Display::new(),
             keypad: Keypad::default(),
             wait_for_key: None,
+            exited: false,
+            flags: [0; 16],
             quirks: Quirks::default(),
             // xorshift must not start at zero
             rng: seed | 1,
@@ -164,6 +189,11 @@ impl Cpu {
 
     pub fn set_quirks(&mut self, quirks: Quirks) {
         self.quirks = quirks;
+    }
+
+    /// Whether the program exited (00FD).
+    pub fn exited(&self) -> bool {
+        self.exited
     }
 
     pub fn display(&self) -> &Display {
@@ -196,8 +226,8 @@ impl Cpu {
 
     /// Fetches and executes a single opcode.
     pub fn step(&mut self) {
-        // we're waiting for a keypress, don't advance..
-        if self.wait_for_key.is_some() {
+        // we're waiting for a keypress, or the program is done, don't advance..
+        if self.wait_for_key.is_some() || self.exited {
             return;
         }
 
@@ -216,8 +246,14 @@ impl Cpu {
 
         match opcode & 0xF000 {
             0x0000 => match opcode {
-                0x00E0 => self.display.clear(), // clear screen
+                0x00C0..=0x00CF => self.display.scroll_down(n as usize), // 00CN (scroll down N pixels)
+                0x00E0 => self.display.clear(),                          // clear screen
                 0x00EE => self.pc = self.stack.pop().unwrap_or(PROGRAM_START), // return from a subroutine
+                0x00FB => self.display.scroll_right(4), // scroll right 4 pixels
+                0x00FC => self.display.scroll_left(4),  // scroll left 4 pixels
+                0x00FD => self.exited = true,           // exit the interpreter
+                0x00FE => self.display.set_hires(false), // low resolution
+                0x00FF => self.display.set_hires(true), // high resolution
                 _ => {} // 0NNN (machine code routine) is unsupported
             },
             0x1000 => self.pc = nnn, // 1NNN (jump to NNN)
@@ -314,6 +350,8 @@ impl Cpu {
             0x1E => self.i = self.i.wrapping_add(self.v[x] as u16), // FX1E (I += VX)
             // FX29 (I = location of font for value of VX)
             0x29 => self.i = (self.v[x] & 0xF) as u16 * FONT_BYTE_LENGTH,
+            // FX30 (I = location of big font for value of VX)
+            0x30 => self.i = BIG_FONT_START + (self.v[x] & 0xF) as u16 * BIG_FONT_BYTE_LENGTH,
             0x33 => {
                 // FX33 (I[0..2] = BCD(VX))
                 let vx = self.v[x];
@@ -335,6 +373,8 @@ impl Cpu {
                 }
                 self.advance_i(x);
             }
+            0x75 => self.flags[..=x].copy_from_slice(&self.v[..=x]), // FX75 (flags[0..X] = V0..VX)
+            0x85 => self.v[..=x].copy_from_slice(&self.flags[..=x]), // FX85 (V0..VX = flags[0..X])
             _ => {}
         }
     }
@@ -346,21 +386,30 @@ impl Cpu {
         }
     }
 
-    /// DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision.
+    /// DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision, or DXY0: a
+    /// 16x16 sprite, two bytes per row.
     /// The start position wraps around the screen, and the sprite is clipped at its edges,
     /// or wraps too with the wrap quirk.
     fn draw(&mut self, x: usize, y: usize, n: u8) {
-        let vx = self.v[x] as usize % Display::WIDTH;
-        let vy = self.v[y] as usize % Display::HEIGHT;
+        let (width, height) = (self.display.width(), self.display.height());
+        let vx = self.v[x] as usize % width;
+        let vy = self.v[y] as usize % height;
+        let (columns, rows) = if n == 0 { (16, 16) } else { (8, n as usize) };
         self.v[0xF] = 0;
-        for yline in 0..n as usize {
-            let data = self.memory[(self.i as usize + yline) & 0xFFF];
-            for xpix in 0..8 {
-                if data & (0x80 >> xpix) != 0 {
+        for yline in 0..rows {
+            // the pixels of a row, leftmost in the highest bit
+            let data = if columns == 16 {
+                let at = self.i as usize + yline * 2;
+                u16::from_be_bytes([self.memory[at & 0xFFF], self.memory[(at + 1) & 0xFFF]])
+            } else {
+                self.memory[(self.i as usize + yline) & 0xFFF] as u16
+            };
+            for xpix in 0..columns {
+                if data & (1 << (columns - 1 - xpix)) != 0 {
                     let (mut px, mut py) = (vx + xpix, vy + yline);
                     if self.quirks.wrap {
-                        px %= Display::WIDTH;
-                        py %= Display::HEIGHT;
+                        px %= width;
+                        py %= height;
                     }
                     if self.display.get(px, py) {
                         self.v[0xF] = 1;
@@ -692,5 +741,105 @@ mod tests {
         // the second row wraps to the top
         assert!(cpu.display.get(62, 0));
         assert!(cpu.display.get(1, 0));
+    }
+
+    #[test]
+    fn high_resolution() {
+        let cpu = run(&[0x00FF]);
+        assert!(cpu.display.hires());
+        assert_eq!((cpu.display.width(), cpu.display.height()), (128, 64));
+
+        // font "0" at (100, 50) is only on screen in high resolution
+        let cpu = run(&[0x00FF, 0x6064, 0x6132, 0xA000, 0xD015]);
+        assert!(cpu.display.get(100, 50));
+        assert!(cpu.display.pixel(100, 50));
+        assert!(!cpu.display.pixel(101, 51));
+
+        // switching back clears the screen, and low resolution pixels cover 2x2 frame pixels
+        let cpu = run(&[0x00FF, 0xA000, 0xD015, 0x00FE, 0xD011]);
+        assert!(!cpu.display.hires());
+        assert_eq!(cpu.display.width(), 64);
+        assert!(cpu.display.get(3, 0));
+        assert!(cpu.display.pixel(7, 1));
+        assert!(!cpu.display.get(0, 1));
+    }
+
+    #[test]
+    fn draw_large_sprite() {
+        // a 16x16 sprite of 0xFF00 rows from 0x300, at (120, 60) in high resolution,
+        // clipped at the edges, then drawn again
+        let program = [0x00FF, 0x6078, 0x613C, 0xA300, 0xD010, 0xD010];
+        let mut rom: Vec<u8> = program
+            .iter()
+            .flat_map(|op: &u16| op.to_be_bytes())
+            .collect();
+        rom.resize(0x100, 0);
+        for _ in 0..16 {
+            rom.extend([0xFF, 0x00]);
+        }
+        let mut cpu = Cpu::with_seed(1);
+        cpu.load(&rom).unwrap();
+        for _ in 0..5 {
+            cpu.step();
+        }
+        assert!(cpu.display.get(120, 60));
+        assert!(cpu.display.get(127, 63));
+        assert!(!cpu.display.get(0, 60));
+        assert!(!cpu.display.get(120, 0));
+        assert_eq!(cpu.v[0xF], 0);
+
+        cpu.step();
+        assert!(!cpu.display.get(120, 60));
+        assert_eq!(cpu.v[0xF], 1);
+    }
+
+    #[test]
+    fn scroll() {
+        // the top row of font "0" (4 pixels) at (8, 0)
+        let cpu = run(&[0x6008, 0x6100, 0xA000, 0xD011, 0x00C3]);
+        assert!(!cpu.display.get(8, 0));
+        assert!(cpu.display.get(8, 3));
+
+        let cpu = run(&[0x6008, 0x6100, 0xA000, 0xD011, 0x00FB]);
+        assert!(!cpu.display.get(8, 0));
+        assert!(cpu.display.get(12, 0));
+        assert!(cpu.display.get(15, 0));
+
+        let cpu = run(&[0x6008, 0x6100, 0xA000, 0xD011, 0x00FC]);
+        assert!(cpu.display.get(4, 0));
+        assert!(!cpu.display.get(8, 0));
+
+        // pixels scrolled off the screen are gone
+        let cpu = run(&[0x6000, 0x6100, 0xA000, 0xD011, 0x00FC, 0x00FB]);
+        assert!(!cpu.display.get(0, 0));
+        assert!(!cpu.display.get(4, 0));
+
+        // in high resolution, scrolling is by high resolution pixels
+        let cpu = run(&[0x00FF, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB, 0x00C1]);
+        assert!(cpu.display.get(12, 1));
+        assert!(!cpu.display.get(11, 1));
+    }
+
+    #[test]
+    fn big_font() {
+        let cpu = run(&[0x6007, 0xF030]);
+        assert_eq!(cpu.i, BIG_FONT_START + 7 * BIG_FONT_BYTE_LENGTH);
+        assert_eq!(cpu.memory[cpu.i as usize], 0xFF); // the top of the 7
+    }
+
+    #[test]
+    fn save_and_restore_flags() {
+        let cpu = run(&[
+            0x6001, 0x6102, 0x6203, 0xF275, 0x6000, 0x6100, 0x6200, 0xF185,
+        ]);
+        assert_eq!(&cpu.v[..3], &[1, 2, 0]);
+    }
+
+    #[test]
+    fn exit() {
+        let cpu = run(&[0x00FD, 0x6001]);
+        assert!(cpu.exited());
+        assert_eq!(cpu.pc, 0x202);
+        assert_eq!(cpu.v[0], 0);
     }
 }

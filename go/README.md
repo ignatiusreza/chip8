@@ -37,8 +37,8 @@ and the tests with
 
     go test ./...
 
-The terminal display is drawn as 64x16 half-block characters inside a border, which needs
-a terminal of at least 66x19. Terminals only report key presses (repeated while held), not
+The terminal display is drawn as 64x16 half-block characters (braille in the SUPER-CHIP high
+resolution) inside a border, which needs a terminal of at least 66x19. Terminals only report key presses (repeated while held), not
 releases, so a key counts as held for 200ms after its last press.
 
 If no audio device is available the emulator runs without sound.

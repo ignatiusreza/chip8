@@ -32,8 +32,23 @@ static constexpr auto HOLD = std::chrono::milliseconds(200);
 static constexpr char KEYMAP[] = "1qweasdzxcrfvtgb";
 
 // the display plus a one character border, and a title line above it
-static constexpr int COLUMNS = Display::WIDTH + 2;
-static constexpr int ROWS = Display::HEIGHT / 2 + 3;
+// a character cell holds 2x2 low resolution pixels, or 2x4 high resolution ones
+static constexpr int CELLS_WIDE = Display::FRAME_WIDTH / 2;
+static constexpr int CELLS_HIGH = Display::FRAME_HEIGHT / 4;
+static constexpr int COLUMNS = CELLS_WIDE + 2;
+static constexpr int ROWS = CELLS_HIGH + 3;
+
+// the braille character showing the 2x4 high resolution pixels at (x, y)
+static std::string braille(const Display &display, int x, int y) {
+  // the bit of each dot, by column then row
+  static const int DOTS[2][4] = {{0x01, 0x02, 0x04, 0x40}, {0x08, 0x10, 0x20, 0x80}};
+  int bits = 0;
+  for(int dx = 0; dx < 2; dx++)
+    for(int dy = 0; dy < 4; dy++)
+      if(display.pixel(x + dx, y + dy)) bits |= DOTS[dx][dy];
+  // U+2800 + bits, in UTF-8
+  return {char(0xE2), char(0xA0 | (bits >> 6)), char(0x80 | (bits & 0x3F))};
+}
 
 static void writeOut(const std::string &s) {
   for(std::size_t done = 0; done < s.size();) {
@@ -116,16 +131,20 @@ void Terminal::draw(Display &display) {
   }
 
   std::string border;
-  for(int x = 0; x < Display::WIDTH; x++) border += "─";
+  for(int x = 0; x < CELLS_WIDE; x++) border += "─";
 
   out += _title + " (Esc to quit)\r\n";
   out += "┌" + border + "┐\r\n";
-  // each character cell holds two pixels, one above the other
-  for(int y = 0; y < Display::HEIGHT; y += 2) {
+  for(int row = 0; row < CELLS_HIGH; row++) {
     out += "│";
-    for(int x = 0; x < Display::WIDTH; x++) {
-      bool top = display.get(x, y), bottom = display.get(x, y + 1);
-      out += top && bottom ? "█" : top ? "▀" : bottom ? "▄" : " ";
+    for(int col = 0; col < CELLS_WIDE; col++) {
+      if(display.hires()) {
+        out += braille(display, col * 2, row * 4);
+      } else {
+        // two low resolution pixels, one above the other, as half blocks
+        bool top = display.get(col, row * 2), bottom = display.get(col, row * 2 + 1);
+        out += top && bottom ? "█" : top ? "▀" : bottom ? "▄" : " ";
+      }
     }
     out += "│\r\n";
   }

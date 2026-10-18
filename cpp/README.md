@@ -35,8 +35,8 @@ If SDL3 or [googletest](https://github.com/google/googletest) isn't installed, C
 builds it; for SDL3 on linux that needs its
 [build dependencies](https://wiki.libsdl.org/SDL3/README-linux#build-dependencies).
 
-The terminal display is drawn as 64x16 half-block characters inside a border, which needs a
-terminal of at least 66x19. Terminals only report key presses (repeated while held), not releases,
+The terminal display is drawn as 64x16 half-block characters (braille in the SUPER-CHIP high
+resolution) inside a border, which needs a terminal of at least 66x19. Terminals only report key presses (repeated while held), not releases,
 so a key counts as held for 200ms after its last press. It needs a POSIX terminal, so on Windows the
 window is the default.
 

@@ -321,3 +321,99 @@ func TestWrapQuirkWrapsSprites(t *testing.T) {
 	expect(t, "(62, 0)", c.display.Get(62, 0), true)
 	expect(t, "(1, 0)", c.display.Get(1, 0), true)
 }
+
+func TestHighResolution(t *testing.T) {
+	c := run(t, 0x00FF)
+	expect(t, "Hires()", c.display.Hires(), true)
+	expect(t, "Width()", c.display.Width(), 128)
+	expect(t, "Height()", c.display.Height(), 64)
+
+	// font "0" at (100, 50) is only on screen in high resolution
+	c = run(t, 0x00FF, 0x6064, 0x6132, 0xA000, 0xD015)
+	expect(t, "Get(100, 50)", c.display.Get(100, 50), true)
+	expect(t, "Pixel(100, 50)", c.display.Pixel(100, 50), true)
+	expect(t, "Pixel(101, 51)", c.display.Pixel(101, 51), false)
+
+	// switching back clears the screen, and low resolution pixels cover 2x2 frame pixels
+	c = run(t, 0x00FF, 0xA000, 0xD015, 0x00FE, 0xD011)
+	expect(t, "Hires()", c.display.Hires(), false)
+	expect(t, "Width()", c.display.Width(), 64)
+	expect(t, "Get(3, 0)", c.display.Get(3, 0), true)
+	expect(t, "Pixel(7, 1)", c.display.Pixel(7, 1), true)
+	expect(t, "Get(0, 1)", c.display.Get(0, 1), false)
+}
+
+func TestDrawLargeSprite(t *testing.T) {
+	// a 16x16 sprite of 0xFF00 rows from 0x300, at (120, 60) in high resolution, clipped
+	// at the edges, then drawn again
+	var rom []byte
+	for _, op := range []uint16{0x00FF, 0x6078, 0x613C, 0xA300, 0xD010, 0xD010} {
+		rom = append(rom, byte(op>>8), byte(op))
+	}
+	rom = append(rom, make([]byte, 0x100-len(rom))...)
+	for range 16 {
+		rom = append(rom, 0xFF, 0x00)
+	}
+	c := NewCPU()
+	if err := c.Load(rom); err != nil {
+		t.Fatal(err)
+	}
+	for range 5 {
+		c.Step()
+	}
+	expect(t, "Get(120, 60)", c.display.Get(120, 60), true)
+	expect(t, "Get(127, 63)", c.display.Get(127, 63), true)
+	expect(t, "Get(0, 60)", c.display.Get(0, 60), false)
+	expect(t, "Get(120, 0)", c.display.Get(120, 0), false)
+	expect(t, "VF", c.v[0xF], 0)
+
+	c.Step()
+	expect(t, "Get(120, 60)", c.display.Get(120, 60), false)
+	expect(t, "VF", c.v[0xF], 1)
+}
+
+func TestScroll(t *testing.T) {
+	// the top row of font "0" (4 pixels) at (8, 0)
+	c := run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00C3)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+	expect(t, "Get(8, 3)", c.display.Get(8, 3), true)
+
+	c = run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+	expect(t, "Get(12, 0)", c.display.Get(12, 0), true)
+	expect(t, "Get(15, 0)", c.display.Get(15, 0), true)
+
+	c = run(t, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FC)
+	expect(t, "Get(4, 0)", c.display.Get(4, 0), true)
+	expect(t, "Get(8, 0)", c.display.Get(8, 0), false)
+
+	// pixels scrolled off the screen are gone
+	c = run(t, 0x6000, 0x6100, 0xA000, 0xD011, 0x00FC, 0x00FB)
+	expect(t, "Get(0, 0)", c.display.Get(0, 0), false)
+	expect(t, "Get(4, 0)", c.display.Get(4, 0), false)
+
+	// in high resolution, scrolling is by high resolution pixels
+	c = run(t, 0x00FF, 0x6008, 0x6100, 0xA000, 0xD011, 0x00FB, 0x00C1)
+	expect(t, "Get(12, 1)", c.display.Get(12, 1), true)
+	expect(t, "Get(11, 1)", c.display.Get(11, 1), false)
+}
+
+func TestBigFont(t *testing.T) {
+	c := run(t, 0x6007, 0xF030)
+	expect(t, "I", c.i, BigFontStart+7*BigFontByteLength)
+	expect(t, "top of the 7", c.memory[c.i], 0xFF)
+}
+
+func TestSaveAndRestoreFlags(t *testing.T) {
+	c := run(t, 0x6001, 0x6102, 0x6203, 0xF275, 0x6000, 0x6100, 0x6200, 0xF185)
+	expect(t, "V0", c.v[0], 1)
+	expect(t, "V1", c.v[1], 2)
+	expect(t, "V2", c.v[2], 0)
+}
+
+func TestExit(t *testing.T) {
+	c := run(t, 0x00FD, 0x6001)
+	expect(t, "Exited()", c.Exited(), true)
+	expect(t, "PC", c.pc, 0x202)
+	expect(t, "V0", c.v[0], 0)
+}

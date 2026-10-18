@@ -23,8 +23,11 @@ const termKeymap = "1qweasdzxcrfvtgb"
 
 // the display plus a one character border, and a title line above it
 const (
-	termColumns = chip8.Width + 2
-	termRows    = chip8.Height/2 + 3
+	// a character cell holds 2x2 low resolution pixels, or 2x4 high resolution ones
+	cellsWide   = chip8.FrameWidth / 2
+	cellsHigh   = chip8.FrameHeight / 4
+	termColumns = cellsWide + 2
+	termRows    = cellsHigh + 3
 )
 
 // terminal runs the emulator in the terminal it was started from, showing the 64x32
@@ -147,24 +150,46 @@ func (t *terminal) draw(display *chip8.Display) {
 	}
 
 	fmt.Fprintf(&b, "%s (Esc to quit)\r\n", t.title)
-	b.WriteString("┌" + strings.Repeat("─", chip8.Width) + "┐\r\n")
-	// each character cell holds two pixels, one above the other
-	for y := 0; y < chip8.Height; y += 2 {
+	b.WriteString("┌" + strings.Repeat("─", cellsWide) + "┐\r\n")
+	for row := range cellsHigh {
 		b.WriteString("│")
-		for x := range chip8.Width {
-			switch top, bottom := display.Get(x, y), display.Get(x, y+1); {
-			case top && bottom:
-				b.WriteString("█")
-			case top:
-				b.WriteString("▀")
-			case bottom:
-				b.WriteString("▄")
-			default:
-				b.WriteByte(' ')
+		for col := range cellsWide {
+			if display.Hires() {
+				b.WriteRune(braille(display, col*2, row*4))
+			} else {
+				b.WriteString(halfBlock(display, col, row*2))
 			}
 		}
 		b.WriteString("│\r\n")
 	}
-	b.WriteString("└" + strings.Repeat("─", chip8.Width) + "┘")
+	b.WriteString("└" + strings.Repeat("─", cellsWide) + "┘")
 	os.Stdout.WriteString(b.String())
+}
+
+// braille is the braille character showing the 2x4 high resolution pixels at (x, y).
+func braille(display *chip8.Display, x, y int) rune {
+	// the bit of each dot, by column then row
+	dots := [2][4]rune{{0x01, 0x02, 0x04, 0x40}, {0x08, 0x10, 0x20, 0x80}}
+	bits := rune(0)
+	for dx, column := range dots {
+		for dy, bit := range column {
+			if display.Pixel(x+dx, y+dy) {
+				bits |= bit
+			}
+		}
+	}
+	return 0x2800 + bits
+}
+
+// halfBlock is the half block showing two low resolution pixels, one above the other.
+func halfBlock(display *chip8.Display, x, y int) string {
+	switch top, bottom := display.Get(x, y), display.Get(x, y+1); {
+	case top && bottom:
+		return "█"
+	case top:
+		return "▀"
+	case bottom:
+		return "▄"
+	}
+	return " "
 }

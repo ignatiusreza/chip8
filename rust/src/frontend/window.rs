@@ -28,7 +28,8 @@ const KEYMAP: [Key; 16] = [
     Key::B,    // F
 ];
 
-/// A desktop window, showing the 64x32 display scaled 8x and reading the keyboard.
+/// A desktop window, showing the 128x64 frame scaled 4x (so low resolution pixels are
+/// scaled 8x) and reading the keyboard.
 pub struct Window {
     window: MinifbWindow,
     buffer: Vec<u32>,
@@ -38,17 +39,17 @@ impl Window {
     pub fn new(title: &str) -> Result<Self> {
         let mut window = MinifbWindow::new(
             title,
-            Display::WIDTH,
-            Display::HEIGHT,
+            Display::FRAME_WIDTH,
+            Display::FRAME_HEIGHT,
             WindowOptions {
-                scale: Scale::X8,
+                scale: Scale::X4,
                 ..WindowOptions::default()
             },
         )?;
         window.set_target_fps(FPS);
         Ok(Window {
             window,
-            buffer: vec![BLACK; Display::BUFF_LENGTH],
+            buffer: vec![BLACK; Display::FRAME_LENGTH],
         })
     }
 }
@@ -69,13 +70,17 @@ impl Screen for Window {
             return Ok(());
         }
 
-        for y in 0..Display::HEIGHT {
-            for x in 0..Display::WIDTH {
-                self.buffer[x + y * Display::WIDTH] = if display.get(x, y) { WHITE } else { BLACK };
+        for y in 0..Display::FRAME_HEIGHT {
+            for x in 0..Display::FRAME_WIDTH {
+                self.buffer[x + y * Display::FRAME_WIDTH] =
+                    if display.pixel(x, y) { WHITE } else { BLACK };
             }
         }
-        self.window
-            .update_with_buffer(&self.buffer, Display::WIDTH, Display::HEIGHT)?;
+        self.window.update_with_buffer(
+            &self.buffer,
+            Display::FRAME_WIDTH,
+            Display::FRAME_HEIGHT,
+        )?;
         Ok(())
     }
 }
