@@ -1,6 +1,6 @@
 #include "window.h"
 
-#include <SDL3/SDL.h>
+#include <stdexcept>
 
 // the key for each CHIP-8 keypad value, laid out like the COSMAC VIP keypad on the left
 // of a QWERTY keyboard:
@@ -17,6 +17,18 @@ static constexpr SDL_Scancode KEYMAP[16] = {
   SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V, // C D E F
 };
 
+Window::Window(const std::string &title)
+    : _window(nullptr, SDL_DestroyWindow), _renderer(nullptr, SDL_DestroyRenderer) {
+  SDL_Window *window;
+  SDL_Renderer *renderer;
+  if(!SDL_CreateWindowAndRenderer(title.c_str(), Display::FRAME_WIDTH*SCALE, Display::FRAME_HEIGHT*SCALE, 0,
+                                  &window, &renderer)) {
+    throw std::runtime_error(std::string("Could not open the window: ") + SDL_GetError());
+  }
+  _window.reset(window);
+  _renderer.reset(renderer);
+}
+
 Keys Window::keys() {
   SDL_Event event;
   while(SDL_PollEvent(&event)) {
@@ -32,6 +44,22 @@ Keys Window::keys() {
 }
 
 void Window::draw(Display &display) {
-  _graphic.update(display, _exposed);
+  if(!display.takeInvalidated() && !_exposed) return;
   _exposed = false;
+
+  SDL_Renderer *renderer = _renderer.get();
+  SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
+  SDL_RenderClear(renderer);
+  SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff);
+  for(int j = 0;j < Display::FRAME_HEIGHT;j++) {
+    for(int i = 0;i < Display::FRAME_WIDTH;i++) {
+      if(display.pixel(i, j)) {
+        SDL_FRect rect = {float(i*SCALE), float(j*SCALE), float(SCALE), float(SCALE)};
+        SDL_RenderFillRect(renderer, &rect);
+      }
+    }
+  }
+
+  /* Update the screen */
+  SDL_RenderPresent(renderer);
 }
