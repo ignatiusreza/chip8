@@ -149,7 +149,6 @@ flowchart TB
         args["Args<br/>the parsed command line"]
         emulator["Emulator<br/>runs the frame loop"]
         sound["Sound<br/>the beeper"]
-        input["Input<br/>sends changed keys"]
         screen["Screen<br/>keys() and draw()"]
         window["Window"]
         terminal["Terminal"]
@@ -166,14 +165,12 @@ flowchart TB
     main -->|parses| args
     main -->|builds from Args, runs| emulator
     emulator -->|Rom::load| rom
-    emulator -->|step, tick_timers| cpu
-    emulator --> input
+    emulator -->|step, tick_timers, set_key| cpu
     emulator --> sound
     emulator --> screen
     window -.->|is a| screen
     terminal -.->|is a| screen
     terminal --> layout
-    input -->|set_key| cpu
     screen -->|draws| display
     cpu --> keypad
     cpu --> display
@@ -182,22 +179,21 @@ flowchart TB
 The `Emulator` loads the `Rom`, and runs it with the quirks and speed given on the command
 line, otherwise the ones from the ROM's settings file, otherwise the defaults. Go has no
 `Screen` type, as Ebitengine runs the window's loop: its terminal and window each drive the
-`Emulator` instead. Every frame goes the same way:
+`Emulator` instead. Every frame goes the same way; `set_key` ignores a key whose state didn't
+change, so `FX0A` only ever sees a fresh press, however a frontend reports its keys:
 
 ```mermaid
 sequenceDiagram
     participant E as Emulator
     participant C as CPU
     participant S as Screen
-    participant I as Input
 
     loop every 1/60s
         E->>C: tick_timers()
         C-->>E: whether to beep (to Sound)
         E->>S: keys()
         S-->>E: the keys held down
-        E->>I: update(keys)
-        I->>C: set_key() for the keys that changed
+        E->>C: set_key() for each key, which only counts changes
         E->>C: step(), speed times
         E->>S: draw(display), if it changed
     end

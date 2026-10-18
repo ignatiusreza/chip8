@@ -1,7 +1,15 @@
 use chip8::Display;
 
-use super::input::Keys;
 use super::Result;
+
+/// The keys held down this frame, as read from a window or terminal.
+#[derive(Default)]
+pub struct Keys {
+    /// Down state for each CHIP-8 keypad value, 0x0 - 0xF.
+    pub down: [bool; 16],
+    /// Whether Esc was pressed.
+    pub quit: bool,
+}
 
 /// A frontend that shows the display and reads the keyboard, once per frame.
 pub trait Screen {

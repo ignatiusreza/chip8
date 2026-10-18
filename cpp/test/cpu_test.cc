@@ -212,6 +212,19 @@ TEST(CPUTest, WaitForKey) {
   EXPECT_EQ(cpu.v(0), 1);
 }
 
+TEST(CPUTest, WaitForKeyIgnoresAHeldKey) {
+  CPU cpu = run({0xF30A, 0x6001}, 0);
+  cpu.setKey(0xB, true); // held before FX0A runs
+  cpu.step();
+  cpu.setKey(0xB, true); // and reported as held again while it waits
+  cpu.setKey(0xB, false);
+  cpu.step();
+  EXPECT_EQ(cpu.v(0), 0); // still waiting for a fresh press
+  cpu.setKey(0xB, true);
+  cpu.setKey(0xB, false);
+  EXPECT_EQ(cpu.v(3), 0xB);
+}
+
 TEST(CPUTest, KeySkips) {
   CPU cpu = run({0x6005, 0xE09E}, 0);
   cpu.setKey(5, true);

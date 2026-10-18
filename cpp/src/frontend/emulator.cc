@@ -35,7 +35,7 @@ Emulator::Emulator(const Args &args) {
 }
 
 void Emulator::run() {
-  while(!_input.quitRequested()) {
+  while(!_quit) {
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
     tick();
   }
@@ -44,7 +44,9 @@ void Emulator::run() {
 void Emulator::tick() {
   // play audio for as long as the sound timer runs
   _sound->setPlaying(_cpu.tickTimers());
-  _input.update(_screen->keys(), _cpu);
+  Keys keys = _screen->keys();
+  for(int k = 0; k < 16; k++) _cpu.setKey(k, keys.down[k]);
+  _quit = keys.quit;
 
   for(int i = 0; i < _speed; i++) _cpu.step();
 

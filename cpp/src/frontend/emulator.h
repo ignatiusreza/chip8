@@ -6,18 +6,18 @@
 #include <string>
 #include "../chip8/cpu.h"
 #include "args.h"
-#include "input.h"
 #include "screen.h"
 #include "sound.h"
 
 // A CPU running a ROM, with its display, keypad and beeper hooked up.
 class Emulator {
   CPU     _cpu;
-  Input   _input;
   // opened once the ROM is loaded, before the screen as it may log to the terminal
   std::optional<Sound> _sound;
   std::unique_ptr<Screen> _screen;
   int     _speed;
+  // set once Esc was pressed, or the window closed
+  bool    _quit = false;
 
   public:
     // loads the ROM and its settings file, then opens the audio device and the screen;

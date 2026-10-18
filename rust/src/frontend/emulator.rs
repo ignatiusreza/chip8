@@ -2,7 +2,6 @@ use std::path::Path;
 
 use chip8::{rom, Cpu, Rom, RomSettings};
 
-use super::input::Input;
 use super::screen::Screen;
 use super::sound::Sound;
 use super::terminal::Terminal;
@@ -12,11 +11,12 @@ use super::{Args, DisplayMode, Result};
 /// A CPU running a ROM, with its display, keypad and beeper hooked up.
 pub struct Emulator {
     cpu: Cpu,
-    input: Input,
     sound: Sound,
     screen: Box<dyn Screen>,
     /// Opcodes run per frame.
     speed: u32,
+    /// Set once Esc was pressed, or the window closed.
+    quit: bool,
 }
 
 impl Emulator {
@@ -53,16 +53,16 @@ impl Emulator {
         };
         Ok(Emulator {
             cpu,
-            input: Input::default(),
             sound,
             screen,
             speed,
+            quit: false,
         })
     }
 
     /// Runs the ROM until Esc is pressed or the window is closed.
     pub fn run(&mut self) -> Result<()> {
-        while !self.input.quit_requested() {
+        while !self.quit {
             self.tick()?;
         }
         Ok(())
@@ -71,7 +71,11 @@ impl Emulator {
     /// Runs one 1/60s frame: timers, keyboard, a few opcodes, then the screen.
     fn tick(&mut self) -> Result<()> {
         self.sound.set_playing(self.cpu.tick_timers());
-        self.input.update(&self.screen.keys(), &mut self.cpu);
+        let keys = self.screen.keys();
+        for (k, &down) in keys.down.iter().enumerate() {
+            self.cpu.set_key(k as u8, down);
+        }
+        self.quit = keys.quit;
 
         for _ in 0..self.speed {
             self.cpu.step();

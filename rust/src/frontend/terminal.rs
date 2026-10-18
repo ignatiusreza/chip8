@@ -13,9 +13,8 @@ use crossterm::terminal::{
 };
 use crossterm::{execute, queue};
 
-use super::input::Keys;
 use super::layout::{game_columns, game_rows, Layout};
-use super::screen::Screen;
+use super::screen::{Keys, Screen};
 use super::Result;
 use chip8::RomSettings;
 

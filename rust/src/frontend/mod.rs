@@ -3,7 +3,6 @@
 
 mod args;
 mod emulator;
-mod input;
 mod layout;
 mod screen;
 mod sound;

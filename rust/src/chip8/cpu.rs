@@ -272,6 +272,10 @@ impl Cpu {
     }
 
     pub fn set_key(&mut self, key: u8, pressed: bool) {
+        // only a change counts, so FX0A waits for a fresh press however the keys are reported
+        if key >= 16 || self.keypad.key(key) == pressed {
+            return;
+        }
         self.keypad.set(key, pressed);
         // like the COSMAC VIP, FX0A waits for a key to be pressed and then released
         if let Some(x) = self.wait_for_key {
@@ -676,6 +680,21 @@ mod tests {
         assert_eq!(cpu.v[3], 0xB);
         cpu.step();
         assert_eq!(cpu.v[0], 1);
+    }
+
+    #[test]
+    fn wait_for_key_ignores_a_held_key() {
+        let mut cpu = Cpu::with_seed(1);
+        cpu.load(&[0xF3, 0x0A, 0x60, 0x01]).unwrap();
+        cpu.set_key(0xB, true); // held before FX0A runs
+        cpu.step();
+        cpu.set_key(0xB, true); // and reported as held again while it waits
+        cpu.set_key(0xB, false);
+        cpu.step();
+        assert_eq!(cpu.v[0], 0); // still waiting for a fresh press
+        cpu.set_key(0xB, true);
+        cpu.set_key(0xB, false);
+        assert_eq!(cpu.v[3], 0xB);
     }
 
     #[test]

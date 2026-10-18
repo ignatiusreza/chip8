@@ -56,7 +56,7 @@ The code is split in two, like the Rust and Go ports:
   can be unit tested on its own.
 - `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
   screen is either the `Terminal`, or an SDL `Window`. Each frame the screen reports the
-  keys held down, and `Input` passes the ones that changed to the CPU.
+  keys held down, and the `Emulator` passes them to the CPU, which only counts changes.
   `layout.cc` places the game and its how to play in the terminal, without SDL.
   `args.cc` parses the command line into the `Args` the `Emulator` is built from, which
   reads the ROM and its settings, so `src/main.cc` only runs the `Emulator`.

@@ -209,6 +209,10 @@ func (c *CPU) TickTimers() bool {
 }
 
 func (c *CPU) SetKey(key byte, pressed bool) {
+	// only a change counts, so FX0A waits for a fresh press however the keys are reported
+	if key >= 16 || c.keypad.Key(key) == pressed {
+		return
+	}
 	c.keypad.Set(key, pressed)
 	// like the COSMAC VIP, FX0A waits for a key to be pressed and then released
 	if c.waitForKey < 0 {

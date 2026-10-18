@@ -1,8 +1,7 @@
 use chip8::Display;
 use minifb::{Key, Scale, Window as MinifbWindow, WindowOptions};
 
-use super::input::Keys;
-use super::screen::Screen;
+use super::screen::{Keys, Screen};
 use super::Result;
 
 const FPS: usize = 60;
