@@ -2,6 +2,7 @@
 #define	_CHIP8_CORE_CPU_H
 
 #include <cstddef>
+#include <string>
 #include "display.h"
 #include "keypad.h"
 #include "stack.h"
@@ -9,6 +10,21 @@
 #define MEMORY_SIZE 0x1000
 #define PROGRAM_START 0x200
 #define FONT_BYTE_LENGTH 5
+
+// Behaviours where CHIP-8 interpreters disagree. With all of them off (the default) the
+// CPU behaves like SUPER-CHIP, except that BNNN jumps relative to V0.
+struct Quirks {
+  bool shift = false;     // 8XY6/8XYE shift VY into VX, instead of shifting VX in place
+  bool loadStore = false; // FX55/FX65 leave I pointing past the last register
+  bool vfReset = false;   // 8XY1/8XY2/8XY3 reset VF to 0
+  bool jump = false;      // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
+  bool wrap = false;      // sprites wrap around the screen edges, instead of being clipped
+
+  // applies a comma separated list of presets (none, vip, schip, octo), which set every
+  // quirk, and quirk names (shift, load-store, vf-reset, jump, wrap), which turn one on,
+  // from left to right; returns false and sets `unknown` on a name it doesn't know
+  bool parse(const std::string &list, std::string &unknown);
+};
 
 // The CHIP-8 machine: memory, registers, timers, stack, display and keypad. It has
 // no windowing or audio dependency; a frontend drives it, shows its display and
@@ -24,6 +40,7 @@ class CPU {
   Stack   _stack;
   Display _display;
   Keypad  _keypad;
+  Quirks  _quirks;
 
   void _x8000();
   void _xF000();
@@ -35,6 +52,8 @@ class CPU {
 
     // copies the ROM into memory at 0x200; returns false if it is larger than MAX_ROM_SIZE
     bool load(const unsigned char *rom, std::size_t size);
+
+    void setQuirks(const Quirks &quirks) { _quirks = quirks; }
 
     // runs the next opcode, unless waiting for a keypress (FX0A)
     void step();

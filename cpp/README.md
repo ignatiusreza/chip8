@@ -24,7 +24,8 @@ then build with
     cmake --build build
 
 run the emulator in the terminal using "build/chip8 ROM", or in a window (the fancy GUI :P)
-using "build/chip8 --display window ROM",
+using "build/chip8 --display window ROM", and pick the [quirks](../README.md#quirks) a ROM
+needs with e.g. "build/chip8 --quirks octo ROM",
 
 and run the tests with
 

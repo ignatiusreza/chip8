@@ -8,7 +8,7 @@ mod window;
 
 use std::str::FromStr;
 
-use chip8::{Cpu, Display};
+use chip8::{Cpu, Display, Quirks};
 use input::{Input, Keys};
 use sound::Sound;
 use terminal::Terminal;
@@ -58,8 +58,9 @@ pub struct Emulator {
 
 impl Emulator {
     /// Loads the ROM, then opens the audio device and the screen.
-    pub fn new(title: &str, rom: &[u8], mode: DisplayMode) -> Result<Self> {
+    pub fn new(title: &str, rom: &[u8], mode: DisplayMode, quirks: Quirks) -> Result<Self> {
         let mut cpu = Cpu::new();
+        cpu.set_quirks(quirks);
         cpu.load(rom)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();

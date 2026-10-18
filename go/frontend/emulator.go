@@ -42,8 +42,9 @@ type Emulator struct {
 }
 
 // New loads the ROM and sets up the audio device.
-func New(title string, rom []byte, mode Mode) (*Emulator, error) {
+func New(title string, rom []byte, mode Mode, quirks chip8.Quirks) (*Emulator, error) {
 	cpu := chip8.NewCPU()
+	cpu.SetQuirks(quirks)
 	if err := cpu.Load(rom); err != nil {
 		return nil, err
 	}

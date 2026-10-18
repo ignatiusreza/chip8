@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <sstream>
 
 #define MEM(addr) _memory[(addr) & (MEMORY_SIZE - 1)]
 #define VX  V[((opcode & 0x0F00) >> 8)]
@@ -44,6 +45,27 @@ CPU::CPU() {
   srand(time(NULL));
 }
 
+bool Quirks::parse(const std::string &list, std::string &unknown) {
+  std::istringstream names(list);
+  std::string name;
+  while(std::getline(names, name, ',')) {
+    if(name == "none") *this = Quirks();
+    else if(name == "vip") { *this = Quirks(); shift = loadStore = vfReset = true; }
+    else if(name == "schip") { *this = Quirks(); jump = true; }
+    else if(name == "octo") { *this = Quirks(); shift = loadStore = wrap = true; }
+    else if(name == "shift") shift = true;
+    else if(name == "load-store") loadStore = true;
+    else if(name == "vf-reset") vfReset = true;
+    else if(name == "jump") jump = true;
+    else if(name == "wrap") wrap = true;
+    else {
+      unknown = name;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool CPU::load(const unsigned char *rom, std::size_t size) {
   if(size > MAX_ROM_SIZE) return false;
 
@@ -82,12 +104,15 @@ void CPU::_x8000() {
       break;
     case 0x0001: // 8XY1 (VX = VX | VY)
       V[X] |= V[Y];
+      if(_quirks.vfReset) V[0xF] = 0;
       break;
     case 0x0002: // 8XY2 (VX = VX & VY)
       V[X] &= V[Y];
+      if(_quirks.vfReset) V[0xF] = 0;
       break;
     case 0x0003: // 8XY3 (VX = VX ^ VY)
       V[X] ^= V[Y];
+      if(_quirks.vfReset) V[0xF] = 0;
       break;
     case 0x0004: // 8XY4 VX += VY, with VF = carry
       temp = V[X] + V[Y];
@@ -100,6 +125,7 @@ void CPU::_x8000() {
       V[0xF] = flag;
       break;
     case 0x0006: // 8XY6 VX >> 1, VF = LSB
+      if(_quirks.shift) V[X] = V[Y];
       flag = V[X] & 0x1;
       V[X] >>= 1;
       V[0xF] = flag;
@@ -110,6 +136,7 @@ void CPU::_x8000() {
       V[0xF] = flag;
       break;
     case 0x000E: // 8XYE VX << 1, VF = MSB
+      if(_quirks.shift) V[X] = V[Y];
       flag = V[X] >> 7;
       V[X] <<= 1;
       V[0xF] = flag;
@@ -147,9 +174,11 @@ void CPU::_xF000() {
       break;
     case 0x0055: // FX55 ( I[0..X] = V0..VX )
       for(int i = 0;i <= X;i++) MEM(I + i) = V[i];
+      if(_quirks.loadStore) I += X + 1;
       break;
     case 0x0065: // FX65 ( V0..VX = I[0..X] )
       for(int i = 0;i <= X;i++) V[i] = MEM(I + i);
+      if(_quirks.loadStore) I += X + 1;
       break;
   }
 }
@@ -220,8 +249,8 @@ void CPU::step() {
       I = NNN;
       PC += 2;
       break;
-    case 0xB000: // BNNN (memory PC = NNN + V0)
-      PC = NNN + V[0];
+    case 0xB000: // BNNN (memory PC = NNN + V0), or BXNN (PC = XNN + VX) with the jump quirk
+      PC = (NNN + (_quirks.jump ? VX : V[0])) & (MEMORY_SIZE - 1);
       break;
     case 0xC000: // CXNN	(VX = random() & NN)
       VX = rand() & NN;
@@ -229,7 +258,8 @@ void CPU::step() {
       break;
     case 0xD000: { // DXYN	(Draw Sprite @(VX, VY) with dimension Nx8, with data from memory at location I )
       // read the coordinates before VF is reset, as VX or VY may be VF; the start
-      // position wraps around the screen, and the sprite is clipped at its edges
+      // position wraps around the screen, and the sprite is clipped at its edges, or
+      // wraps too with the wrap quirk
       int x = VX % Display::WIDTH;
       int y = VY % Display::HEIGHT;
 
@@ -238,8 +268,10 @@ void CPU::step() {
         data = MEM(I + yline); //this retreives the byte for a given line of pixels
         for(int xpix = 0; xpix < 8; xpix++){
           if ((data & (0x80 >> xpix)) != 0){
-            if (_display.get(x + xpix, y + yline)) V[0xF] = 1; //there has been a collision
-            _display.flip(x + xpix, y + yline);
+            int px = x + xpix, py = y + yline;
+            if (_quirks.wrap) { px %= Display::WIDTH; py %= Display::HEIGHT; }
+            if (_display.get(px, py)) V[0xF] = 1; //there has been a collision
+            _display.flip(px, py);
           }
         }
       }

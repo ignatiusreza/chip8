@@ -25,6 +25,8 @@ class Emulator {
     // can't be opened
     Emulator(const std::string &title, DisplayMode mode);
 
+    void setQuirks(const Quirks &quirks) { _cpu.setQuirks(quirks); }
+
     // copies the ROM into memory; returns false if it is too large
     bool load(const unsigned char *rom, std::size_t size) { return _cpu.load(rom, size); }
 

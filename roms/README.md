@@ -15,9 +15,9 @@ archive's `src/` directory.
 | `mini-lights-out.ch8` | Mini Lights Out | tobiasvl       | 2019-10-04 |
 | `superpong.ch8`       | Super Pong      | offstatic      | 2021-10-15 |
 
-These were picked because they only use plain CHIP-8 and don't depend on the quirks where these
-emulators differ from Octo's defaults (shifting `VY` into `VX`, `FX55`/`FX65` advancing `I`, and
-sprites wrapping around the screen edges).
+These were picked because they only use plain CHIP-8 and run with the default
+[quirks](../README.md#quirks). Most other CHIP-8 programs in the archive are made with Octo, so
+run them with `--quirks octo`.
 
 Controls
 --------

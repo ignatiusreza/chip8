@@ -4,6 +4,7 @@ package chip8
 import (
 	"fmt"
 	"math/rand/v2"
+	"strings"
 )
 
 const (
@@ -43,6 +44,48 @@ func (e *RomTooLargeError) Error() string {
 	return fmt.Sprintf("ROM is %d bytes, but at most %d fit in memory", e.Size, MemorySize-ProgramStart)
 }
 
+// Quirks are behaviours where CHIP-8 interpreters disagree. With all of them off (the
+// default) the CPU behaves like SUPER-CHIP, except that BNNN jumps relative to V0.
+type Quirks struct {
+	Shift     bool // 8XY6/8XYE shift VY into VX, instead of shifting VX in place
+	LoadStore bool // FX55/FX65 leave I pointing past the last register
+	VFReset   bool // 8XY1/8XY2/8XY3 reset VF to 0
+	Jump      bool // BNNN jumps to NNN + VX (X being the top nibble of NNN), instead of V0
+	Wrap      bool // sprites wrap around the screen edges, instead of being clipped
+}
+
+// ParseQuirks parses a comma separated list of presets (none, vip, schip, octo), which set
+// every quirk, and quirk names (shift, load-store, vf-reset, jump, wrap), which turn one on,
+// applied from left to right.
+func ParseQuirks(s string) (Quirks, error) {
+	var q Quirks
+	for _, name := range strings.Split(s, ",") {
+		switch name {
+		case "none":
+			q = Quirks{}
+		case "vip":
+			q = Quirks{Shift: true, LoadStore: true, VFReset: true}
+		case "schip":
+			q = Quirks{Jump: true}
+		case "octo":
+			q = Quirks{Shift: true, LoadStore: true, Wrap: true}
+		case "shift":
+			q.Shift = true
+		case "load-store":
+			q.LoadStore = true
+		case "vf-reset":
+			q.VFReset = true
+		case "jump":
+			q.Jump = true
+		case "wrap":
+			q.Wrap = true
+		default:
+			return Quirks{}, fmt.Errorf("unknown quirk %q, expected none, vip, schip, octo, shift, load-store, vf-reset, jump or wrap", name)
+		}
+	}
+	return q, nil
+}
+
 type CPU struct {
 	v      [16]byte
 	i      uint16
@@ -55,6 +98,7 @@ type CPU struct {
 	keypad  Keypad
 	// register waiting for a keypress (FX0A), or -1; execution halts until it's set
 	waitForKey int
+	quirks     Quirks
 	random     func() byte
 }
 
@@ -77,6 +121,10 @@ func (c *CPU) Load(rom []byte) error {
 	copy(c.memory[ProgramStart:], rom)
 	c.pc = ProgramStart
 	return nil
+}
+
+func (c *CPU) SetQuirks(q Quirks) {
+	c.quirks = q
 }
 
 func (c *CPU) Display() *Display {
@@ -160,8 +208,12 @@ func (c *CPU) execute(opcode uint16) {
 		c.skipIf(c.v[x] != c.v[y])
 	case 0xA000: // ANNN (I = NNN)
 		c.i = nnn
-	case 0xB000: // BNNN (PC = NNN + V0)
-		c.pc = (nnn + uint16(c.v[0])) & addrMask
+	case 0xB000: // BNNN (PC = NNN + V0), or BXNN (PC = XNN + VX) with the jump quirk
+		offset := c.v[0]
+		if c.quirks.Jump {
+			offset = c.v[x]
+		}
+		c.pc = (nnn + uint16(offset)) & addrMask
 	case 0xC000: // CXNN (VX = random() & NN)
 		c.v[x] = c.random() & nn
 	case 0xD000:
@@ -181,16 +233,24 @@ func (c *CPU) execute(opcode uint16) {
 
 func (c *CPU) x8000(x, y int, n byte) {
 	vx, vy := c.v[x], c.v[y]
+	// the shift quirk shifts VY instead of VX
+	shifted := vx
+	if c.quirks.Shift {
+		shifted = vy
+	}
 	// VF is written after the result, so the flag wins when X is F
 	switch n {
 	case 0x0: // 8XY0 (VX = VY)
 		c.v[x] = vy
 	case 0x1: // 8XY1 (VX = VX | VY)
 		c.v[x] |= vy
+		c.resetVF()
 	case 0x2: // 8XY2 (VX = VX & VY)
 		c.v[x] &= vy
+		c.resetVF()
 	case 0x3: // 8XY3 (VX = VX ^ VY)
 		c.v[x] ^= vy
+		c.resetVF()
 	case 0x4: // 8XY4 VX += VY, with VF = carry
 		c.v[x] = vx + vy
 		c.v[0xF] = boolToByte(int(vx)+int(vy) > 0xFF)
@@ -198,14 +258,21 @@ func (c *CPU) x8000(x, y int, n byte) {
 		c.v[x] = vx - vy
 		c.v[0xF] = boolToByte(vx >= vy)
 	case 0x6: // 8XY6 VX >> 1, VF = LSB
-		c.v[x] = vx >> 1
-		c.v[0xF] = vx & 0x1
+		c.v[x] = shifted >> 1
+		c.v[0xF] = shifted & 0x1
 	case 0x7: // 8XY7 VX = VY - VX, with VF = NOT borrow
 		c.v[x] = vy - vx
 		c.v[0xF] = boolToByte(vy >= vx)
 	case 0xE: // 8XYE VX << 1, VF = MSB
-		c.v[x] = vx << 1
-		c.v[0xF] = vx >> 7
+		c.v[x] = shifted << 1
+		c.v[0xF] = shifted >> 7
+	}
+}
+
+// resetVF clears VF after 8XY1/8XY2/8XY3 with the vf-reset quirk.
+func (c *CPU) resetVF() {
+	if c.quirks.VFReset {
+		c.v[0xF] = 0
 	}
 }
 
@@ -233,15 +300,25 @@ func (c *CPU) xF000(x int, nn byte) {
 		for r := 0; r <= x; r++ {
 			c.memory[(i+uint16(r))&addrMask] = c.v[r]
 		}
+		c.advanceI(x)
 	case 0x65: // FX65 (V0..VX = I[0..X])
 		for r := 0; r <= x; r++ {
 			c.v[r] = c.memory[(i+uint16(r))&addrMask]
 		}
+		c.advanceI(x)
+	}
+}
+
+// advanceI leaves I past the last register after FX55/FX65 with the load/store quirk.
+func (c *CPU) advanceI(x int) {
+	if c.quirks.LoadStore {
+		c.i += uint16(x) + 1
 	}
 }
 
 // draw implements DXYN: draw an 8xN sprite from memory at I to (VX, VY), VF = collision.
-// The start position wraps around the screen, and the sprite is clipped at its edges.
+// The start position wraps around the screen, and the sprite is clipped at its edges, or
+// wraps too with the wrap quirk.
 func (c *CPU) draw(x, y int, n byte) {
 	vx, vy := int(c.v[x])%Width, int(c.v[y])%Height
 	c.v[0xF] = 0
@@ -250,6 +327,9 @@ func (c *CPU) draw(x, y int, n byte) {
 		for xpix := 0; xpix < 8; xpix++ {
 			if data&(0x80>>xpix) != 0 {
 				px, py := vx+xpix, vy+yline
+				if c.quirks.Wrap {
+					px, py = px%Width, py%Height
+				}
 				if c.display.Get(px, py) {
 					c.v[0xF] = 1
 				}

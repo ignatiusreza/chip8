@@ -2,10 +2,12 @@ mod frontend;
 
 use frontend::{DisplayMode, Emulator};
 
-const USAGE: &str = "Usage : {} [--display tui|window] ROMNAME
+const USAGE: &str = "Usage : {} [--display tui|window] [--quirks LIST] ROMNAME
 
   --display tui     draw in this terminal (default)
-  --display window  open a separate window";
+  --display window  open a separate window
+  --quirks LIST     comma separated presets (none, vip, schip, octo) and quirks
+                    (shift, load-store, vf-reset, jump, wrap) to turn on";
 
 fn main() -> frontend::Result<()> {
     let mut args = std::env::args();
@@ -13,12 +15,17 @@ fn main() -> frontend::Result<()> {
     let usage = USAGE.replace("{}", &program);
 
     let mut mode = DisplayMode::default();
+    let mut quirks = chip8::Quirks::default();
     let mut rom_path = None;
     while let Some(arg) = args.next() {
         if let Some(value) = arg.strip_prefix("--display=") {
             mode = value.parse()?;
         } else if arg == "--display" {
             mode = args.next().ok_or("--display needs a value")?.parse()?;
+        } else if let Some(value) = arg.strip_prefix("--quirks=") {
+            quirks = value.parse()?;
+        } else if arg == "--quirks" {
+            quirks = args.next().ok_or("--quirks needs a value")?.parse()?;
         } else if arg == "-h" || arg == "--help" {
             println!("{usage}");
             return Ok(());
@@ -34,7 +41,7 @@ fn main() -> frontend::Result<()> {
     };
 
     let rom = std::fs::read(&rom_path).map_err(|e| format!("Could not read {rom_path}: {e}"))?;
-    let mut emulator = Emulator::new(&format!("Chip 8 : {rom_path}"), &rom, mode)?;
+    let mut emulator = Emulator::new(&format!("Chip 8 : {rom_path}"), &rom, mode, quirks)?;
 
     while emulator.is_running() {
         emulator.tick()?;

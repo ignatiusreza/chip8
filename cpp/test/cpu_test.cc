@@ -18,9 +18,10 @@ std::vector<unsigned char> assemble(std::initializer_list<unsigned short> progra
 }
 
 // loads the program and runs `steps` opcodes, one per opcode by default
-CPU run(std::initializer_list<unsigned short> program, int steps = -1) {
+CPU run(std::initializer_list<unsigned short> program, int steps = -1, const Quirks &quirks = Quirks()) {
   std::vector<unsigned char> rom = assemble(program);
   CPU cpu;
+  cpu.setQuirks(quirks);
   EXPECT_TRUE(cpu.load(rom.data(), rom.size()));
   if(steps < 0) steps = program.size();
   for(int i = 0; i < steps; i++) cpu.step();
@@ -237,4 +238,81 @@ TEST(CPUTest, Timers) {
   EXPECT_FALSE(cpu.tickTimers());
   cpu.step();
   EXPECT_EQ(cpu.v(1), 0);
+}
+
+TEST(CPUTest, ParseQuirks) {
+  Quirks quirks;
+  std::string unknown;
+  EXPECT_TRUE(quirks.parse("octo", unknown));
+  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.wrap);
+  EXPECT_FALSE(quirks.vfReset || quirks.jump);
+
+  // presets reset the quirks named before them, single quirks add to them
+  EXPECT_TRUE(quirks.parse("wrap,vip,jump", unknown));
+  EXPECT_TRUE(quirks.shift && quirks.loadStore && quirks.vfReset && quirks.jump);
+  EXPECT_FALSE(quirks.wrap);
+
+  EXPECT_FALSE(quirks.parse("schip,bogus", unknown));
+  EXPECT_EQ(unknown, "bogus");
+}
+
+TEST(CPUTest, ShiftQuirkShiftsVY) {
+  Quirks quirks;
+  quirks.shift = true;
+  CPU cpu = run({0x6081, 0x6103, 0x8016}, -1, quirks);
+  EXPECT_EQ(cpu.v(0), 0x01);
+  EXPECT_EQ(cpu.v(0xF), 1);
+
+  cpu = run({0x6001, 0x6181, 0x801E}, -1, quirks);
+  EXPECT_EQ(cpu.v(0), 0x02);
+  EXPECT_EQ(cpu.v(0xF), 1);
+}
+
+TEST(CPUTest, LoadStoreQuirkAdvancesI) {
+  Quirks quirks;
+  quirks.loadStore = true;
+  CPU cpu = run({0xA300, 0xF255}, -1, quirks);
+  EXPECT_EQ(cpu.index(), 0x303);
+  cpu = run({0xA300, 0xF065}, -1, quirks);
+  EXPECT_EQ(cpu.index(), 0x301);
+}
+
+TEST(CPUTest, VFResetQuirk) {
+  CPU cpu = run({0x6F05, 0x8011});
+  EXPECT_EQ(cpu.v(0xF), 5);
+
+  Quirks quirks;
+  quirks.vfReset = true;
+  for(unsigned short op : {0x8011, 0x8012, 0x8013}) {
+    cpu = run({0x6F05, op}, -1, quirks);
+    EXPECT_EQ(cpu.v(0xF), 0);
+  }
+}
+
+TEST(CPUTest, JumpQuirkUsesVX) {
+  CPU cpu = run({0x6004, 0x6302, 0xB300});
+  EXPECT_EQ(cpu.pc(), 0x304);
+
+  Quirks quirks;
+  quirks.jump = true;
+  cpu = run({0x6004, 0x6302, 0xB300}, -1, quirks);
+  EXPECT_EQ(cpu.pc(), 0x302);
+}
+
+TEST(CPUTest, WrapQuirkWrapsSprites) {
+  // the top row of font "0" at (62, 31) is clipped after two pixels by default
+  CPU cpu = run({0x603E, 0x611F, 0xA000, 0xD011});
+  EXPECT_TRUE(cpu.display().get(63, 31));
+  EXPECT_FALSE(cpu.display().get(0, 31));
+
+  Quirks quirks;
+  quirks.wrap = true;
+  cpu = run({0x603E, 0x611F, 0xA000, 0xD012}, -1, quirks);
+  EXPECT_TRUE(cpu.display().get(63, 31));
+  EXPECT_TRUE(cpu.display().get(0, 31));
+  EXPECT_TRUE(cpu.display().get(1, 31));
+  EXPECT_FALSE(cpu.display().get(2, 31));
+  // the second row wraps to the top
+  EXPECT_TRUE(cpu.display().get(62, 0));
+  EXPECT_TRUE(cpu.display().get(1, 0));
 }

@@ -29,6 +29,10 @@ which draws in the terminal, or in a separate window with
 
     go run . -display window ROM
 
+with the [quirks](../README.md#quirks) a ROM needs picked with e.g.
+
+    go run . -quirks octo ROM
+
 and the tests with
 
     go test ./...

@@ -29,6 +29,10 @@ which draws in the terminal, or in a separate window with
 
     cargo run --release -- --display window ROM
 
+with the [quirks](../README.md#quirks) a ROM needs picked with e.g.
+
+    cargo run --release -- --quirks octo ROM
+
 and the tests with
 
     cargo test

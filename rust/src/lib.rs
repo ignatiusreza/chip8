@@ -4,6 +4,6 @@ pub mod cpu;
 pub mod display;
 pub mod keypad;
 
-pub use cpu::Cpu;
+pub use cpu::{Cpu, Quirks};
 pub use display::Display;
 pub use keypad::Keypad;

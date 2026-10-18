@@ -2,17 +2,25 @@ package chip8
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
 // run loads the program and executes one step per opcode.
 func run(t *testing.T, program ...uint16) *CPU {
 	t.Helper()
+	return runWith(t, Quirks{}, program...)
+}
+
+// runWith is run, with the given quirks.
+func runWith(t *testing.T, q Quirks, program ...uint16) *CPU {
+	t.Helper()
 	rom := make([]byte, 0, len(program)*2)
 	for _, op := range program {
 		rom = append(rom, byte(op>>8), byte(op))
 	}
 	c := NewCPU()
+	c.SetQuirks(q)
 	if err := c.Load(rom); err != nil {
 		t.Fatal(err)
 	}
@@ -247,4 +255,69 @@ func TestTimers(t *testing.T) {
 	expect(t, "beep 3", c.TickTimers(), false)
 	c.execute(0xF107)
 	expect(t, "V1", c.v[1], 0)
+}
+
+func TestParseQuirks(t *testing.T) {
+	q, err := ParseQuirks("octo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "octo", q, Quirks{Shift: true, LoadStore: true, Wrap: true})
+
+	// presets reset the quirks named before them, single quirks add to them
+	q, err = ParseQuirks("wrap,vip,jump")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(t, "wrap,vip,jump", q, Quirks{Shift: true, LoadStore: true, VFReset: true, Jump: true})
+
+	if _, err := ParseQuirks("schip,bogus"); err == nil || !strings.Contains(err.Error(), `"bogus"`) {
+		t.Errorf("ParseQuirks(schip,bogus) error = %v, want one naming \"bogus\"", err)
+	}
+}
+
+func TestShiftQuirkShiftsVY(t *testing.T) {
+	q := Quirks{Shift: true}
+	c := runWith(t, q, 0x6081, 0x6103, 0x8016)
+	expect(t, "V0", c.v[0], 0x01)
+	expect(t, "VF", c.v[0xF], 1)
+
+	c = runWith(t, q, 0x6001, 0x6181, 0x801E)
+	expect(t, "V0", c.v[0], 0x02)
+	expect(t, "VF", c.v[0xF], 1)
+}
+
+func TestLoadStoreQuirkAdvancesI(t *testing.T) {
+	q := Quirks{LoadStore: true}
+	expect(t, "I after FX55", runWith(t, q, 0xA300, 0xF255).i, 0x303)
+	expect(t, "I after FX65", runWith(t, q, 0xA300, 0xF065).i, 0x301)
+}
+
+func TestVFResetQuirk(t *testing.T) {
+	expect(t, "VF", run(t, 0x6F05, 0x8011).v[0xF], 5)
+
+	for _, op := range []uint16{0x8011, 0x8012, 0x8013} {
+		expect(t, "VF", runWith(t, Quirks{VFReset: true}, 0x6F05, op).v[0xF], 0)
+	}
+}
+
+func TestJumpQuirkUsesVX(t *testing.T) {
+	expect(t, "PC", run(t, 0x6004, 0x6302, 0xB300).pc, 0x304)
+	expect(t, "PC", runWith(t, Quirks{Jump: true}, 0x6004, 0x6302, 0xB300).pc, 0x302)
+}
+
+func TestWrapQuirkWrapsSprites(t *testing.T) {
+	// the top row of font "0" at (62, 31) is clipped after two pixels by default
+	c := run(t, 0x603E, 0x611F, 0xA000, 0xD011)
+	expect(t, "(63, 31)", c.display.Get(63, 31), true)
+	expect(t, "(0, 31)", c.display.Get(0, 31), false)
+
+	c = runWith(t, Quirks{Wrap: true}, 0x603E, 0x611F, 0xA000, 0xD012)
+	expect(t, "(63, 31)", c.display.Get(63, 31), true)
+	expect(t, "(0, 31)", c.display.Get(0, 31), true)
+	expect(t, "(1, 31)", c.display.Get(1, 31), true)
+	expect(t, "(2, 31)", c.display.Get(2, 31), false)
+	// the second row wraps to the top
+	expect(t, "(62, 0)", c.display.Get(62, 0), true)
+	expect(t, "(1, 0)", c.display.Get(1, 0), true)
 }
