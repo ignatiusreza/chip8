@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
+	"github.com/ignatiusreza/chip8/go/chip8/settings"
 )
 
 // The terminal shows the game as a title line above a bordered box of character cells,
@@ -37,8 +38,8 @@ type layout struct {
 // to or below it, and centres them in a columns x rows terminal. How to play goes beside
 // the game in a terminal wider than it is tall, and below it otherwise, unless only the
 // other fits.
-func layoutTerminal(columns, rows int, settings RomSettings) layout {
-	hasPanel := len(howToPlay(settings, panelMaxWidth)) > 0
+func layoutTerminal(columns, rows int, howTo settings.RomSettings) layout {
+	hasPanel := len(howToPlay(howTo, panelMaxWidth)) > 0
 	// characters are about twice as tall as they are wide
 	wide := columns > rows*2
 	for _, scale := range []int{2, 1} {
@@ -47,10 +48,10 @@ func layoutTerminal(columns, rows int, settings RomSettings) layout {
 		}
 		gw, gh := gameColumns(scale), gameRows(scale)
 		besidesFits := columns >= gw+panelGap+panelMinWidth && rows >= gh
-		belowPanel := howToPlay(settings, gw-2)
+		belowPanel := howToPlay(howTo, gw-2)
 		belowFits := columns >= gw && rows >= gh+1+len(belowPanel)
 		if besidesFits && (wide || !belowFits) {
-			panel := howToPlay(settings, min(panelMaxWidth, columns-gw-panelGap))
+			panel := howToPlay(howTo, min(panelMaxWidth, columns-gw-panelGap))
 			return besides(columns, rows, scale, truncate(panel, rows))
 		}
 		if belowFits {
@@ -59,7 +60,7 @@ func layoutTerminal(columns, rows int, settings RomSettings) layout {
 	}
 	// below the normal size game, as much of how to play as fits
 	if gh := gameRows(1); hasPanel && columns >= gameColumns(1) && rows >= gh+2 {
-		return below(columns, rows, 1, truncate(howToPlay(settings, gameColumns(1)-2), rows-gh-1))
+		return below(columns, rows, 1, truncate(howToPlay(howTo, gameColumns(1)-2), rows-gh-1))
 	}
 	for _, scale := range []int{2, 1} {
 		if columns >= gameColumns(scale) && rows >= gameRows(scale) {
@@ -89,7 +90,7 @@ func below(columns, rows, scale int, panel []string) layout {
 
 // howToPlay lays out the ROM's title, author, about, controls, and the quirks and speed it
 // runs with, as lines of at most width characters, with blank lines between them.
-func howToPlay(settings RomSettings, width int) []string {
+func howToPlay(howTo settings.RomSettings, width int) []string {
 	var lines []string
 	section := func(texts []string, indent int) {
 		if len(texts) == 0 {
@@ -103,23 +104,23 @@ func howToPlay(settings RomSettings, width int) []string {
 		}
 	}
 	var heading []string
-	if settings.Title != "" {
-		heading = append(heading, settings.Title)
+	if howTo.Title != "" {
+		heading = append(heading, howTo.Title)
 	}
-	if settings.Author != "" {
-		heading = append(heading, "by "+settings.Author)
+	if howTo.Author != "" {
+		heading = append(heading, "by "+howTo.Author)
 	}
 	section(heading, 0)
-	section(settings.About, 0)
-	if len(settings.Controls) > 0 {
-		section(append([]string{"Controls"}, settings.Controls...), 2)
+	section(howTo.About, 0)
+	if len(howTo.Controls) > 0 {
+		section(append([]string{"Controls"}, howTo.Controls...), 2)
 	}
 	var running []string
-	if settings.Quirks != nil {
-		running = append(running, "Quirks: "+settings.Quirks.String())
+	if howTo.Quirks != nil {
+		running = append(running, "Quirks: "+howTo.Quirks.String())
 	}
-	if settings.Speed != nil {
-		running = append(running, fmt.Sprintf("Speed: %d opcodes per frame", *settings.Speed))
+	if howTo.Speed != nil {
+		running = append(running, fmt.Sprintf("Speed: %d opcodes per frame", *howTo.Speed))
 	}
 	section(running, 2)
 	return lines

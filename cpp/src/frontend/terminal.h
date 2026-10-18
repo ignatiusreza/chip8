@@ -7,7 +7,7 @@
 #include <string>
 #include "layout.h"
 #include "screen.h"
-#include "settings.h"
+#include "../core/settings.h"
 
 struct termios;
 

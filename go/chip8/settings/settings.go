@@ -1,4 +1,6 @@
-package frontend
+// Package settings reads what a ROM needs to run well, and how to play it, from the
+// settings file next to it.
+package settings
 
 import (
 	"errors"
@@ -61,8 +63,8 @@ func ParseSpeed(value string) (int, error) {
 	return speed, nil
 }
 
-// ParseRomSettings parses the text of a settings file.
-func ParseRomSettings(text string) (RomSettings, error) {
+// Parse parses the text of a settings file.
+func Parse(text string) (RomSettings, error) {
 	var settings RomSettings
 	for i, line := range strings.Split(text, "\n") {
 		line = strings.TrimSpace(line)
@@ -101,14 +103,14 @@ func ParseRomSettings(text string) (RomSettings, error) {
 	return settings, nil
 }
 
-// RomSettingsPath returns the path of the settings file for the ROM at romPath.
-func RomSettingsPath(romPath string) string {
+// Path returns the path of the settings file for the ROM at romPath.
+func Path(romPath string) string {
 	return strings.TrimSuffix(romPath, filepath.Ext(romPath)) + ".cfg"
 }
 
-// LoadRomSettings reads the settings file for the ROM at romPath, if it has one.
-func LoadRomSettings(romPath string) (RomSettings, error) {
-	path := RomSettingsPath(romPath)
+// Load reads the settings file for the ROM at romPath, if it has one.
+func Load(romPath string) (RomSettings, error) {
+	path := Path(romPath)
 	text, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return RomSettings{}, nil // the ROM runs with the defaults
@@ -116,7 +118,7 @@ func LoadRomSettings(romPath string) (RomSettings, error) {
 	if err != nil {
 		return RomSettings{}, fmt.Errorf("could not read %s: %w", path, err)
 	}
-	settings, err := ParseRomSettings(string(text))
+	settings, err := Parse(string(text))
 	if err != nil {
 		return RomSettings{}, fmt.Errorf("%s, %w", path, err)
 	}

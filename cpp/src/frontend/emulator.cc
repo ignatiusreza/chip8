@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-#include "settings.h"
+#include "../core/settings.h"
 #include "terminal.h"
 #include "window.h"
 

@@ -5,13 +5,14 @@ A Go port of the same emulator as [`../cpp`](../cpp) and [`../rust`](../rust), k
 same structure (CPU, display, keypad) and timing (opcodes run in batches every 1/60s tick).
 The call stack is a plain slice, capped at 16 entries.
 
-The emulator core (package [`chip8`](chip8)) has no windowing or audio dependency, so it
-can be unit tested on its own. Package [`frontend`](frontend) wires it to the outside
+The emulator core (package [`chip8`](chip8)), with the ROM settings file parser (package
+[`chip8/settings`](chip8/settings)), has no windowing or audio dependency, so it can be unit
+tested on its own. Package [`frontend`](frontend) wires it to the outside
 world, like the C++ `Graphic`, `Input` and `Sound` classes, using
 [x/term](https://pkg.go.dev/golang.org/x/term) for the terminal display and keyboard,
 [Ebitengine](https://ebitengine.org) for the window display and keyboard, and
-[oto](https://github.com/ebitengine/oto) for the beeper; it also reads a ROM's settings
-file and places the game and its how to play in the terminal, and parses the command line
+[oto](https://github.com/ebitengine/oto) for the beeper; it also places the game and its
+how to play in the terminal, and parses the command line
 and reads the ROM and its settings into the `Options` the `Emulator` runs, so `main.go` only
 runs the `Emulator`.
 

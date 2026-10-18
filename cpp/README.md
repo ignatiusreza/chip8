@@ -51,12 +51,12 @@ Code layout
 
 The code is split in two, like the Rust and Go ports:
 
-- `src/core/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`), built as the `chip8_core`
-  library. It has no SDL dependency, so it can be unit tested on its own.
+- `src/core/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`) and the ROM settings file
+  parser (`settings.cc`), built as the `chip8_core` library. It has no SDL dependency, so it
+  can be unit tested on its own.
 - `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
   screen is either the `Terminal`, or a `Window` made of the SDL `Graphic` and `Input` classes.
-  `settings.cc` reads a ROM's settings file and `layout.cc` places the game and its how to
-  play in the terminal, both without SDL.
+  `layout.cc` places the game and its how to play in the terminal, without SDL.
   `options.cc` parses the command line and reads the ROM and its settings into the
   `Options` the `Emulator` runs, so `src/main.cc` only runs the `Emulator`.
 

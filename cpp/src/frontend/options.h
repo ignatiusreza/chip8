@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "../core/cpu.h"
-#include "settings.h"
+#include "../core/settings.h"
 
 // Where the display is shown and the keyboard read from.
 enum class DisplayMode {

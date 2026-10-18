@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <gtest/gtest.h>
-#include "frontend/settings.h"
+#include "core/settings.h"
 
 TEST(SettingsTest, ParsesQuirksAndSpeed) {
   RomSettings settings;

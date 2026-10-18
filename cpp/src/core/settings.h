@@ -1,10 +1,10 @@
-#ifndef _CHIP8_FRONTEND_SETTINGS_H
-#define	_CHIP8_FRONTEND_SETTINGS_H
+#ifndef _CHIP8_CORE_SETTINGS_H
+#define	_CHIP8_CORE_SETTINGS_H
 
 #include <optional>
 #include <string>
 #include <vector>
-#include "../core/cpu.h"
+#include "cpu.h"
 
 // the settings used for a ROM that doesn't say otherwise
 static constexpr const char *DEFAULT_QUIRKS = "octo";
@@ -49,4 +49,4 @@ std::string romSettingsPath(const std::string &romPath);
 // none; returns false and sets `error` if it can't be read or is invalid
 bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error);
 
-#endif	/* _CHIP8_FRONTEND_SETTINGS_H */
+#endif	/* _CHIP8_CORE_SETTINGS_H */

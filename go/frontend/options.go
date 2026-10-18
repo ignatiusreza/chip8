@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
+	"github.com/ignatiusreza/chip8/go/chip8/settings"
 )
 
 // Mode is where the display is shown and the keyboard read from.
@@ -37,7 +38,7 @@ type Options struct {
 	Quirks chip8.Quirks
 	Speed  int
 	// the ROM's settings file, with those quirks and speed, for the terminal to show
-	Settings RomSettings
+	Settings settings.RomSettings
 }
 
 // ParseOptions parses the command line (args starting with the program name), then reads
@@ -53,7 +54,7 @@ func ParseOptions(args []string) (*Options, error) {
 		out := flags.Output()
 		fmt.Fprintf(out, "Usage : %s [-display tui|window] [-quirks LIST] [-speed N] ROMNAME\n\n", args[0])
 		flags.PrintDefaults()
-		fmt.Fprintf(out, "\nWithout -quirks or -speed, they are read from the ROM's .cfg file if it has one,\notherwise they default to %s and %d.\n", DefaultQuirks, DefaultSpeed)
+		fmt.Fprintf(out, "\nWithout -quirks or -speed, they are read from the ROM's .cfg file if it has one,\notherwise they default to %s and %d.\n", settings.DefaultQuirks, settings.DefaultSpeed)
 	}
 	flags.Parse(args[1:])
 	if flags.NArg() < 1 {
@@ -72,27 +73,27 @@ func ParseOptions(args []string) (*Options, error) {
 	}
 
 	// the command line wins over the ROM's settings file, which wins over the defaults
-	settings, err := LoadRomSettings(path)
+	romSettings, err := settings.Load(path)
 	if err != nil {
 		return nil, err
 	}
-	quirks, err := ParseQuirks(DefaultQuirks)
+	quirks, err := settings.ParseQuirks(settings.DefaultQuirks)
 	if *quirkList != "" {
-		quirks, err = ParseQuirks(*quirkList)
-	} else if settings.Quirks != nil {
-		quirks = *settings.Quirks
+		quirks, err = settings.ParseQuirks(*quirkList)
+	} else if romSettings.Quirks != nil {
+		quirks = *romSettings.Quirks
 	}
 	if err != nil {
 		return nil, err
 	}
-	speed := DefaultSpeed
+	speed := settings.DefaultSpeed
 	if *speedValue != "" {
-		if speed, err = ParseSpeed(*speedValue); err != nil {
+		if speed, err = settings.ParseSpeed(*speedValue); err != nil {
 			return nil, fmt.Errorf("-%w", err)
 		}
-	} else if settings.Speed != nil {
-		speed = *settings.Speed
+	} else if romSettings.Speed != nil {
+		speed = *romSettings.Speed
 	}
-	settings.Quirks, settings.Speed = &quirks, &speed
-	return &Options{RomPath: path, Rom: rom, Mode: mode, Quirks: quirks, Speed: speed, Settings: settings}, nil
+	romSettings.Quirks, romSettings.Speed = &quirks, &speed
+	return &Options{RomPath: path, Rom: rom, Mode: mode, Quirks: quirks, Speed: speed, Settings: romSettings}, nil
 }
