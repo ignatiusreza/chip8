@@ -5,8 +5,8 @@ A Rust port of the C++ emulator in [`../cpp`](../cpp), keeping the same structur
 (CPU, display, keypad) and timing (opcodes run in batches every ~16ms tick). The call stack
 is a plain `Vec`, capped at 16 entries.
 
-The emulator core (`src/lib.rs`), with the ROM settings file parser (`src/settings.rs`), has
-no windowing or audio dependency, so it can be unit tested on its own, and it is also what
+The emulator core (`src/chip8/`, re-exported by `src/lib.rs`), with the ROM settings file
+parser (`src/chip8/settings.rs`), has no windowing or audio dependency, so it can be unit tested on its own, and it is also what
 the [web version](../web) compiles to WebAssembly. `src/frontend/` wires it to the outside
 world, like the C++ `Graphic`, `Input` and `Sound` classes, using pure-Rust crates:
 [crossterm](https://crates.io/crates/crossterm) for the terminal display and keyboard,

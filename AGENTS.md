@@ -8,13 +8,17 @@ quirks and presets, speed, ROM settings files, keyboard, terminal layout); keep 
 ## The ports mirror each other
 
 The three native ports share the same structure, behaviour and tests, so a change to the
-emulator's behaviour is normally made in **all three**, with the matching test in each:
+emulator's behaviour is normally made in **all three**, with the matching test in each.
+Each port lays its code out the same way: the core in a `chip8` directory (`cpp/src/chip8/`,
+`rust/src/chip8/`, `go/chip8/`), the frontend in `frontend/` beside it, and `main` next to
+them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths stay
+`chip8::Cpu`, `chip8::settings`.
 
 | Concern | C++ | Rust | Go |
 |---|---|---|---|
-| CPU, opcodes, quirks | `cpp/src/chip8/cpu.{h,cc}` | `rust/src/cpu.rs` | `go/chip8/cpu.go` |
-| Display, keypad | `cpp/src/chip8/*.h` | `rust/src/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
-| ROM settings files | `cpp/src/chip8/settings.cc` | `rust/src/settings.rs` | `go/chip8/settings.go` |
+| CPU, opcodes, quirks | `cpp/src/chip8/cpu.{h,cc}` | `rust/src/chip8/cpu.rs` | `go/chip8/cpu.go` |
+| Display, keypad | `cpp/src/chip8/*.h` | `rust/src/chip8/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
+| ROM settings files | `cpp/src/chip8/settings.cc` | `rust/src/chip8/settings.rs` | `go/chip8/settings.go` |
 | Terminal layout | `cpp/src/frontend/layout.cc` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
 | Command line options | `cpp/src/frontend/options.cc` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |

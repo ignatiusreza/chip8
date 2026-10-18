@@ -1,4 +1,4 @@
-use crate::{Display, Keypad};
+use super::{Display, Keypad};
 
 pub const MEMORY_SIZE: usize = 0x1000;
 pub const PROGRAM_START: u16 = 0x200;
