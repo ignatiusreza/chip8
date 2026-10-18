@@ -1,0 +1,36 @@
+# The web player on Fly.io (see web/README.md). Deploy from the repository root with
+#
+#   fly deploy --ha=false
+#
+# Shared sessions live in the server's memory, so it must run on a single machine.
+
+# change to the app name you create with `fly launch` or `fly apps create`
+app = "chip8-erauqssidlroweht"
+primary_region = "fra"
+
+[build]
+  dockerfile = "web/Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # stop when nobody is connected, and start again on the next visit; open WebSockets
+  # count as connections, so a shared game keeps it running
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

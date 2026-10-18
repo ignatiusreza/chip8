@@ -5,14 +5,15 @@ A Rust port of the C++ emulator in [`../cpp`](../cpp), keeping the same structur
 (CPU, display, keypad) and timing (opcodes run in batches every ~16ms tick). The call stack
 is a plain `Vec`, capped at 16 entries.
 
-The emulator core (`src/lib.rs`) has no windowing or audio dependency, so it can be
-unit tested on its own. `src/frontend/` wires it to the outside world, like the C++
-`Graphic`, `Input` and `Sound` classes, using pure-Rust crates:
+The emulator core (`src/lib.rs`), with the ROM settings file parser (`src/settings.rs`), has
+no windowing or audio dependency, so it can be unit tested on its own, and it is also what
+the [web version](../web) compiles to WebAssembly. `src/frontend/` wires it to the outside
+world, like the C++ `Graphic`, `Input` and `Sound` classes, using pure-Rust crates:
 [crossterm](https://crates.io/crates/crossterm) for the terminal display and keyboard,
 [minifb](https://crates.io/crates/minifb) for the window display and keyboard, and
-[rodio](https://crates.io/crates/rodio) for the beeper. `src/frontend/settings.rs` reads a
-ROM's settings file, and `src/frontend/layout.rs` places the game and its how to play in the
-terminal. `src/main.rs` just parses the options, reads the ROM and its settings, and runs the
+[rodio](https://crates.io/crates/rodio) for the beeper; they are only needed by the `chip8`
+binary, behind the default `frontend` feature. `src/frontend/layout.rs` places the game and
+its how to play in the terminal. `src/main.rs` just parses the options, reads the ROM and its settings, and runs the
 `Emulator` loop.
 
 Building

@@ -13,7 +13,7 @@
 
 use std::path::{Path, PathBuf};
 
-use chip8::Quirks;
+use crate::Quirks;
 
 /// The quirks used for a ROM that doesn't say otherwise.
 pub const DEFAULT_QUIRKS: &str = "octo";

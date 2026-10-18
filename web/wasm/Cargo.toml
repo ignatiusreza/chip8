@@ -1,0 +1,11 @@
+[package]
+name = "chip8-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "The CHIP-8 core as a WebAssembly module, for the web player in ../static"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+chip8 = { path = "../../rust", default-features = false }

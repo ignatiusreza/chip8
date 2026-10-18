@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CHIP-8</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <label id="picker">
+          Game
+          <select id="rom"></select>
+        </label>
+        <div id="sharing">
+          <button id="share" type="button">Share live</button>
+          <span id="link" hidden>
+            <input id="url" readonly aria-label="Link to watch" />
+            <button id="copy" type="button">Copy</button>
+          </span>
+          <span id="viewers"></span>
+        </div>
+        <p id="status" role="status"></p>
+      </header>
+
+      <div id="game">
+        <div id="screen-area">
+          <canvas id="screen" width="128" height="64" tabindex="0" aria-label="Game screen"></canvas>
+          <button id="sound" type="button" hidden>Turn on sound</button>
+          <div id="keypad" aria-label="Keypad"></div>
+        </div>
+        <aside id="panel"></aside>
+      </div>
+    </main>
+  </body>
+</html>

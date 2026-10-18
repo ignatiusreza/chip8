@@ -3,14 +3,13 @@
 
 mod input;
 mod layout;
-pub mod settings;
 mod sound;
 mod terminal;
 mod window;
 
 use std::str::FromStr;
 
-use chip8::{Cpu, Display, Quirks};
+use chip8::{settings, Cpu, Display, Quirks};
 use input::{Input, Keys};
 use sound::Sound;
 use terminal::Terminal;
