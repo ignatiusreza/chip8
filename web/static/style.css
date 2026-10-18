@@ -1,0 +1,59 @@
+:root {
+  color-scheme: light dark;
+  --fg: #1d1d1f;
+  --bg: #f5f5f2;
+  --muted: #6b6b6b;
+  --line: #d4d4cf;
+  --screen-on: #e8e8e0;
+  --screen-off: #1b1b1b;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e6e6e1;
+    --bg: #121212;
+    --muted: #9a9a95;
+    --line: #333331;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+
+header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
+header label, #sharing { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#status { margin: 0; color: var(--muted); flex-basis: 100%; min-height: 1.2em; }
+select, button, input { font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 4px 8px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--fg); }
+#url { width: 22em; max-width: 60vw; }
+#viewers { color: var(--muted); }
+
+/* the game and its how to play side by side when there is room, stacked otherwise */
+#game { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: center; }
+#screen-area { flex: 1 1 512px; max-width: 768px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+#screen {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  image-rendering: pixelated;
+  background: var(--screen-off);
+  border: 1px solid var(--line);
+  outline: none;
+}
+#screen:focus-visible { border-color: var(--fg); }
+#panel { flex: 0 1 300px; line-height: 1.5; }
+#panel h1 { font-size: 1.2em; margin: 0; }
+#panel .author { color: var(--muted); margin: 0 0 1em; }
+#panel p { margin: 0 0 0.5em; }
+#panel h2 { font-size: 1em; margin: 1em 0 0.25em; }
+#panel ul { list-style: none; padding: 0; margin: 0; }
+#panel .running { color: var(--muted); margin-top: 1em; }
+
+/* the hex keypad, laid out like the COSMAC VIP's, for touch screens */
+#keypad { display: grid; grid-template-columns: repeat(4, 3.2em); gap: 6px; }
+#keypad button { height: 2.6em; touch-action: none; user-select: none; }
+#keypad button.down { background: var(--fg); color: var(--bg); }
+#keypad small { display: block; color: var(--muted); font-size: 0.7em; }
+#keypad button.down small { color: var(--bg); }
+.watching #picker, .watching #keypad, .watching #share { display: none; }

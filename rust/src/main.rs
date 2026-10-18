@@ -1,6 +1,7 @@
 mod frontend;
 
-use frontend::{settings, DisplayMode, Emulator};
+use chip8::settings;
+use frontend::{DisplayMode, Emulator};
 
 const USAGE: &str = "Usage : {} [--display tui|window] [--quirks LIST] [--speed N] ROMNAME
 

@@ -3,7 +3,7 @@
 
 use chip8::Display;
 
-use super::settings::RomSettings;
+use chip8::settings::RomSettings;
 
 /// The gap between the game and how to play beside it.
 const PANEL_GAP: usize = 3;

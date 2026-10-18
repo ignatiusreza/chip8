@@ -15,8 +15,8 @@ use crossterm::{execute, queue};
 
 use super::input::Keys;
 use super::layout::{game_columns, game_rows, Layout};
-use super::settings::RomSettings;
 use super::{Result, Screen};
+use chip8::settings::RomSettings;
 
 const FRAME: Duration = Duration::from_nanos(1_000_000_000 / 60);
 

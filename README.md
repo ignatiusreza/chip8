@@ -7,9 +7,11 @@ than one language.
 - [`cpp/`](cpp/) - the original C++ implementation (SDL3, googletest)
 - [`rust/`](rust/) - a port of the same emulator to Rust (crossterm, minifb, rodio)
 - [`go/`](go/) - a port of the same emulator to Go (x/term, Ebitengine, oto)
+- [`web/`](web/) - the Rust core compiled to WebAssembly, to play in the browser, with a server
+  that lets players share a link for others to watch them play live
 
-All three draw in the terminal they are started from by default, and can open a separate
-window instead with `--display window`.
+The three native ones draw in the terminal they are started from by default, and can open a
+separate window instead with `--display window`.
 
 In the terminal, the game is centred, with the ROM's [how to play](#rom-settings) and the
 [quirks](#quirks) and [speed](#speed) it runs with next to it in a terminal wider than it is tall

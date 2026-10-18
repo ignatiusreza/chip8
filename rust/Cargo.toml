@@ -4,7 +4,17 @@ version = "0.1.0"
 edition = "2021"
 description = "A CHIP-8 emulator, ported from the C++ implementation in ../cpp"
 
+[features]
+# the terminal, window and sound of the chip8 binary; the library itself has no
+# dependencies, so it also builds for WebAssembly (see ../web)
+default = ["frontend"]
+frontend = ["dep:crossterm", "dep:minifb", "dep:rodio"]
+
+[[bin]]
+name = "chip8"
+required-features = ["frontend"]
+
 [dependencies]
-crossterm = "0.29"
-minifb = "0.28"
-rodio = { version = "0.22", default-features = false, features = ["playback"] }
+crossterm = { version = "0.29", optional = true }
+minifb = { version = "0.28", optional = true }
+rodio = { version = "0.22", default-features = false, features = ["playback"], optional = true }

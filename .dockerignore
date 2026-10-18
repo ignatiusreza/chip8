@@ -1,0 +1,5 @@
+# only rust/, web/ and roms/ go into the web player's image (web/Dockerfile)
+.git
+**/target
+cpp
+go

@@ -1,0 +1,10 @@
+# The web version of the emulator: the Rust core compiled to WebAssembly, running in the
+# browser, and a server that serves it and relays shared sessions to people watching.
+[workspace]
+members = ["wasm", "server"]
+resolver = "2"
+
+[profile.release]
+# a small .wasm to download
+opt-level = "s"
+lto = true
