@@ -17,12 +17,12 @@ them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths
 | Concern | C++ | Rust | Go |
 |---|---|---|---|
 | CPU, opcodes, quirks | `cpp/src/chip8/cpu.{h,cc}` | `rust/src/chip8/cpu.rs` | `go/chip8/cpu.go` |
-| Display, keypad | `cpp/src/chip8/*.h` | `rust/src/chip8/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
-| ROM settings files | `cpp/src/chip8/settings.cc` | `rust/src/chip8/settings.rs` | `go/chip8/settings.go` |
-| Terminal layout | `cpp/src/frontend/layout.cc` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
+| Display, keypad | `cpp/src/chip8/{display,keypad}.h` | `rust/src/chip8/{display,keypad}.rs` | `go/chip8/{display,keypad}.go` |
+| ROM settings files | `cpp/src/chip8/settings.{h,cc}` | `rust/src/chip8/settings.rs` | `go/chip8/settings.go` |
+| Terminal layout | `cpp/src/frontend/layout.{h,cc}` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
-| Command line options | `cpp/src/frontend/options.cc` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |
-| Emulator loop | `cpp/src/frontend/emulator.cc` | `rust/src/frontend/emulator.rs` | `go/frontend/emulator.go` |
+| Command line options | `cpp/src/frontend/options.{h,cc}` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |
+| Emulator loop | `cpp/src/frontend/emulator.{h,cc}` | `rust/src/frontend/emulator.rs` | `go/frontend/emulator.go` |
 
 - The tests are ports of each other, with the same names in each language's style
   (`CPUTest.WaitForKey`, `wait_for_key`, `TestWaitForKey`). When adding or changing a test,
