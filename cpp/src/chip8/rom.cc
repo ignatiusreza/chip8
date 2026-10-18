@@ -25,7 +25,7 @@ bool parseSpeed(const std::string &value, int &speed) {
   return true;
 }
 
-bool parseRomSettings(const std::string &text, RomSettings &settings, std::string &error) {
+bool RomSettings::parse(const std::string &text, RomSettings &settings, std::string &error) {
   std::istringstream lines(text);
   std::string line;
   for(int number = 1; std::getline(lines, line); number++) {
@@ -70,7 +70,7 @@ bool parseRomSettings(const std::string &text, RomSettings &settings, std::strin
   return true;
 }
 
-std::string romSettingsPath(const std::string &romPath) {
+std::string RomSettings::path(const std::string &romPath) {
   // replace the extension of the file name, not of a directory
   size_t dot = romPath.find_last_of('.');
   size_t slash = romPath.find_last_of("/\\");
@@ -79,14 +79,14 @@ std::string romSettingsPath(const std::string &romPath) {
 }
 
 bool RomSettings::load(const std::string &romPath, RomSettings &settings, std::string &error) {
-  std::string path = romSettingsPath(romPath);
-  std::ifstream file(path);
+  std::string settingsPath = path(romPath);
+  std::ifstream file(settingsPath);
   if(!file) return true; // the ROM runs with the defaults
 
   std::stringstream text;
   text << file.rdbuf();
-  if(!parseRomSettings(text.str(), settings, error)) {
-    error = path + ", " + error;
+  if(!parse(text.str(), settings, error)) {
+    error = settingsPath + ", " + error;
     return false;
   }
   return true;

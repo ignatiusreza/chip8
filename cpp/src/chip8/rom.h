@@ -35,6 +35,12 @@ struct RomSettings {
   std::vector<std::string> about;
   std::vector<std::string> controls;
 
+  // parses the text of a settings file; returns false and sets `error` if it is invalid
+  static bool parse(const std::string &text, RomSettings &settings, std::string &error);
+
+  // the path of the settings file for the ROM at `romPath`
+  static std::string path(const std::string &romPath);
+
   // reads the settings file for the ROM at `romPath`, leaving `settings` empty if there is
   // none; returns false and sets `error` if it can't be read or is invalid
   static bool load(const std::string &romPath, RomSettings &settings, std::string &error);
@@ -42,12 +48,6 @@ struct RomSettings {
 
 // parses an opcodes per frame count, between 1 and MAX_SPEED
 bool parseSpeed(const std::string &value, int &speed);
-
-// parses the text of a settings file; returns false and sets `error` if it is invalid
-bool parseRomSettings(const std::string &text, RomSettings &settings, std::string &error);
-
-// the path of the settings file for the ROM at `romPath`
-std::string romSettingsPath(const std::string &romPath);
 
 // A ROM read from a file, with its settings.
 struct Rom {
