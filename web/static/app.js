@@ -340,6 +340,15 @@ function ended(rom) {
   status.append(link)
 }
 
+// Embedded in another page, such as the blog, tell it how tall the page is, so it can
+// size the frame to fit instead of scrolling inside it.
+if (window.parent !== window) {
+  const main = document.querySelector('main')
+  new ResizeObserver(() => {
+    window.parent.postMessage({ type: 'chip8-height', height: Math.ceil(main.getBoundingClientRect().height) }, '*')
+  }).observe(main)
+}
+
 const roms = await loadRoms()
 const watching = location.pathname.match(/^\/watch\/([A-Za-z0-9]+)$/)
 if (watching) watch(roms, watching[1])

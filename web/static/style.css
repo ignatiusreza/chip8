@@ -56,4 +56,8 @@ button:hover { border-color: var(--fg); }
 #keypad button.down { background: var(--fg); color: var(--bg); }
 #keypad small { display: block; color: var(--muted); font-size: 0.7em; }
 #keypad button.down small { color: var(--bg); }
+/* with a mouse there is a keyboard too, so the keypad only shows on touch screens */
+@media (hover: hover) and (pointer: fine) {
+  #keypad { display: none; }
+}
 .watching #picker, .watching #keypad, .watching #share { display: none; }
