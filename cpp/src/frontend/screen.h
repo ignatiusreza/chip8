@@ -1,8 +1,16 @@
 #ifndef _CHIP8_FRONTEND_SCREEN_H
 #define	_CHIP8_FRONTEND_SCREEN_H
 
+#include <array>
 #include "../chip8/display.h"
-#include "input.h"
+
+// The keys held down this frame, as read from a window or terminal.
+struct Keys {
+  // down state for each CHIP-8 keypad value, 0x0 - 0xF
+  std::array<bool, 16> down{};
+  // whether Esc was pressed (or the window closed)
+  bool quit = false;
+};
 
 // Where the display is shown and the keyboard read from: the terminal or a window.
 class Screen {

@@ -35,9 +35,10 @@ and the frame loop as Mermaid diagrams; update them when either changes.
   over 1/60s frames, and each frame calls `tick_timers` (which decrements DT/ST, reports
   whether to beep and ends the `vblank` quirk's wait), reads the keys, runs `speed` opcodes
   (`step`), then draws. The `Screen` (terminal or window) reports the keys held down as
-  `Keys`, and `Input` passes the ones that changed to `set_key(key, pressed)`. Go has no
-  `Screen` type, as Ebitengine runs the window's loop: its window and terminal each call the
-  `Emulator`'s `tick` with their `Keys`.
+  `Keys`, which the `Emulator` passes to `set_key(key, pressed)`; the CPU ignores a key whose
+  state didn't change, so `FX0A` only sees fresh presses. Go has no `Screen` type, as
+  Ebitengine runs the window's loop: its window and terminal each call the `Emulator`'s
+  `tick` with their `Keys`.
 - Terminals mostly report only key presses, so the terminal frontends treat a key as held for
   200ms after its last press and then send a release (Rust uses exact releases when the
   terminal supports the kitty keyboard protocol).

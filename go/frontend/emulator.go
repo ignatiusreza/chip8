@@ -9,7 +9,6 @@ const tps = 60
 // Emulator is a CPU running a ROM, with its display, keypad and beeper hooked up.
 type Emulator struct {
 	cpu   *chip8.CPU
-	input *Input
 	sound *Sound
 	title string
 	mode  Mode
@@ -47,7 +46,6 @@ func New(args *Args) (*Emulator, error) {
 	}
 	return &Emulator{
 		cpu:   cpu,
-		input: &Input{},
 		sound: NewSound(),
 		title: "Chip 8 : " + args.RomPath,
 		mode:  args.Mode,
@@ -65,12 +63,20 @@ func (e *Emulator) Run() error {
 	return runTerminal(e, e.title, e.howTo)
 }
 
+// Keys are the keys held down this tick, as read from a window or terminal.
+type Keys struct {
+	Down [16]bool // down state for each CHIP-8 keypad value, 0x0 - 0xF
+	Quit bool     // whether Esc was pressed
+}
+
 // tick runs one 1/60s tick: timers, keyboard, then a few opcodes. It reports false once
 // Esc was pressed.
 func (e *Emulator) tick(keys Keys) bool {
 	e.sound.SetPlaying(e.cpu.TickTimers())
-	e.input.Update(keys, e.cpu)
-	if e.input.QuitRequested() {
+	for k, down := range keys.Down {
+		e.cpu.SetKey(byte(k), down)
+	}
+	if keys.Quit {
 		return false
 	}
 

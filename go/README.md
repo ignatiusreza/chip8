@@ -7,7 +7,7 @@ The call stack is a plain slice, capped at 16 entries.
 
 The emulator core (package [`chip8`](chip8)), with ROM files and their settings, has no
 windowing or audio dependency, so it can be unit tested on its own. Package [`frontend`](frontend) wires it to the outside
-world, like the C++ `Terminal`, `Window`, `Input` and `Sound` classes, using
+world, like the C++ `Terminal`, `Window` and `Sound` classes, using
 [x/term](https://pkg.go.dev/golang.org/x/term) for the terminal display and keyboard,
 [Ebitengine](https://ebitengine.org) for the window display and keyboard, and
 [oto](https://github.com/ebitengine/oto) for the beeper; it also places the game and its

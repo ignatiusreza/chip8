@@ -223,6 +223,22 @@ func TestWaitForKey(t *testing.T) {
 	expect(t, "V0", c.v[0], 1)
 }
 
+func TestWaitForKeyIgnoresAHeldKey(t *testing.T) {
+	c := NewCPU()
+	if err := c.Load([]byte{0xF3, 0x0A, 0x60, 0x01}); err != nil {
+		t.Fatal(err)
+	}
+	c.SetKey(0xB, true) // held before FX0A runs
+	c.Step()
+	c.SetKey(0xB, true) // and reported as held again while it waits
+	c.SetKey(0xB, false)
+	c.Step()
+	expect(t, "V0", c.v[0], 0) // still waiting for a fresh press
+	c.SetKey(0xB, true)
+	c.SetKey(0xB, false)
+	expect(t, "V3", c.v[3], 0xB)
+}
+
 func TestKeySkips(t *testing.T) {
 	c := NewCPU()
 	if err := c.Load([]byte{0x60, 0x05, 0xE0, 0x9E}); err != nil {

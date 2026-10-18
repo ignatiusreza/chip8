@@ -138,7 +138,8 @@ bool CPU::tickTimers() {
 }
 
 void CPU::setKey(int key, bool pressed) {
-  if(key < 0 || key >= 0x10) return;
+  // only a change counts, so FX0A waits for a fresh press however the keys are reported
+  if(key < 0 || key >= 0x10 || _keypad.key(key) == pressed) return;
 
   _keypad.set(key, pressed);
   // like the COSMAC VIP, FX0A waits for a key to be pressed and then released
