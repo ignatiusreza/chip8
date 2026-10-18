@@ -1,4 +1,4 @@
-package frontend
+package chip8
 
 import (
 	"errors"
@@ -8,13 +8,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/ignatiusreza/chip8/go/chip8"
 )
 
+// DefaultQuirks are the quirks used for a ROM that doesn't say otherwise, which quirk lists
+// on the command line and in settings files start from, so e.g. "vf-reset" adds that quirk
+// to them.
+var DefaultQuirks, _ = ParseQuirks("octo")
+
 const (
-	// DefaultQuirks are the quirks used for a ROM that doesn't say otherwise.
-	DefaultQuirks = "octo"
 	// DefaultSpeed is the opcodes run per frame for a ROM that doesn't say otherwise.
 	DefaultSpeed = 15
 	MaxSpeed     = 10000
@@ -34,22 +35,12 @@ const (
 // Blank lines and lines starting with "#" are ignored. Quirks and speed that aren't given
 // (nil) use the defaults.
 type RomSettings struct {
-	Quirks   *chip8.Quirks
+	Quirks   *Quirks
 	Speed    *int
 	Title    string
 	Author   string
 	About    []string
 	Controls []string
-}
-
-// ParseQuirks parses a quirk list, starting from the default quirks, so e.g. "vf-reset"
-// adds that quirk to them.
-func ParseQuirks(list string) (chip8.Quirks, error) {
-	defaults, err := chip8.ParseQuirks(DefaultQuirks)
-	if err != nil {
-		panic(err)
-	}
-	return defaults.Apply(list)
 }
 
 // ParseSpeed parses an opcodes per frame count, between 1 and MaxSpeed.
@@ -75,7 +66,7 @@ func ParseRomSettings(text string) (RomSettings, error) {
 		}
 		switch name, value = strings.TrimSpace(name), strings.TrimSpace(value); name {
 		case "quirks":
-			quirks, err := ParseQuirks(value)
+			quirks, err := DefaultQuirks.Apply(value)
 			if err != nil {
 				return RomSettings{}, fmt.Errorf("line %d: %w", i+1, err)
 			}
@@ -121,4 +112,24 @@ func LoadRomSettings(romPath string) (RomSettings, error) {
 		return RomSettings{}, fmt.Errorf("%s, %w", path, err)
 	}
 	return settings, nil
+}
+
+// Rom is a ROM read from a file, with its settings.
+type Rom struct {
+	// the program, loaded into memory at 0x200
+	Data     []byte
+	Settings RomSettings
+}
+
+// LoadRom reads the ROM at path, and its settings file if it has one.
+func LoadRom(path string) (*Rom, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read %s: %v", path, err)
+	}
+	settings, err := LoadRomSettings(path)
+	if err != nil {
+		return nil, err
+	}
+	return &Rom{Data: data, Settings: settings}, nil
 }

@@ -110,8 +110,8 @@ TEST(CPUTest, ReturnWithEmptyStackRestartsProgram) {
 
 TEST(CPUTest, CallDepthIsCapped) {
   // 0x200: call 0x200, recursing forever
-  CPU cpu = run({0x2200}, Stack::CAPACITY + 1);
-  EXPECT_EQ(cpu.stackSize(), Stack::CAPACITY);
+  CPU cpu = run({0x2200}, CPU::STACK_DEPTH + 1);
+  EXPECT_EQ(cpu.stackSize(), CPU::STACK_DEPTH);
   EXPECT_EQ(cpu.pc(), 0x200);
 }
 

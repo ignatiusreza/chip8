@@ -1,4 +1,4 @@
-package frontend
+package chip8
 
 import (
 	"slices"

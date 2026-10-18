@@ -1,5 +1,5 @@
-#ifndef _CHIP8_CORE_DISPLAY_H
-#define	_CHIP8_CORE_DISPLAY_H
+#ifndef _CHIP8_CHIP8_DISPLAY_H
+#define	_CHIP8_CHIP8_DISPLAY_H
 
 #include <bitset>
 
@@ -78,4 +78,4 @@ class Display {
     }
 };
 
-#endif	/* _CHIP8_CORE_DISPLAY_H */
+#endif	/* _CHIP8_CHIP8_DISPLAY_H */

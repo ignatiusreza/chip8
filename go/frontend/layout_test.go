@@ -4,9 +4,11 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/ignatiusreza/chip8/go/chip8"
 )
 
-var br8kout = RomSettings{
+var br8kout = chip8.RomSettings{
 	Title:    "Br8kout",
 	Author:   "SharpenedSpoon",
 	About:    []string{"Breakout: bounce the ball off your paddle to break all the bricks."},
@@ -29,17 +31,17 @@ func TestHowToPlay(t *testing.T) {
 	if got := howToPlay(br8kout, 30); !slices.Equal(got, want) {
 		t.Errorf("howToPlay() =\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-	if got := howToPlay(RomSettings{}, 30); got != nil {
+	if got := howToPlay(chip8.RomSettings{}, 30); got != nil {
 		t.Errorf("howToPlay() of no settings = %q, want none", got)
 	}
 }
 
 func TestHowToPlayShowsQuirksAndSpeed(t *testing.T) {
-	settings := br8kout
-	quirks, _ := ParseQuirks("vf-reset")
+	howTo := br8kout
+	quirks, _ := chip8.DefaultQuirks.Apply("vf-reset")
 	speed := 7
-	settings.Quirks, settings.Speed = &quirks, &speed
-	lines := howToPlay(settings, 40)
+	howTo.Quirks, howTo.Speed = &quirks, &speed
+	lines := howToPlay(howTo, 40)
 	want := []string{"", "Quirks: octo,vf-reset", "Speed: 7 opcodes per frame"}
 	if got := lines[len(lines)-3:]; !slices.Equal(got, want) {
 		t.Errorf("howToPlay() ends with %q, want %q", got, want)
@@ -83,7 +85,7 @@ func TestLayoutPicksTheLargestGameThatFitsWithHowToPlay(t *testing.T) {
 
 func TestLayoutCentres(t *testing.T) {
 	// the normal size game alone, 66x19, in the middle of 100x29
-	l := layoutTerminal(100, 29, RomSettings{})
+	l := layoutTerminal(100, 29, chip8.RomSettings{})
 	if l.scale != 1 || l.gameX != 17 || l.gameY != 5 || l.panel != nil {
 		t.Errorf("layout = %+v, want the normal size game at (17, 5)", l)
 	}
@@ -99,7 +101,7 @@ func TestLayoutTooSmall(t *testing.T) {
 	if l := layoutTerminal(65, 40, br8kout); l.fits {
 		t.Errorf("layout = %+v, want it not to fit", l)
 	}
-	if l := layoutTerminal(66, 18, RomSettings{}); l.fits {
+	if l := layoutTerminal(66, 18, chip8.RomSettings{}); l.fits {
 		t.Errorf("layout = %+v, want it not to fit", l)
 	}
 }

@@ -51,15 +51,16 @@ Code layout
 
 The code is split in two, like the Rust and Go ports:
 
-- `src/core/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`, `Stack`), built as the `chip8_core`
-  library. It has no SDL dependency, so it can be unit tested on its own.
+- `src/chip8/` - the CHIP-8 machine (`CPU`, `Display`, `Keypad`), and ROM files with their
+  settings (`rom.cc`), built as the `chip8_core` library. It has no SDL dependency, so it
+  can be unit tested on its own.
 - `src/frontend/` - the `Emulator` that wires the CPU to a `Screen` and the SDL `Sound`. The
-  screen is either the `Terminal`, or a `Window` made of the SDL `Graphic` and `Input` classes.
-  `settings.cc` reads a ROM's settings file and `layout.cc` places the game and its how to
-  play in the terminal, both without SDL.
-  `src/main.cc` just parses the options, reads the ROM and its settings, and runs the `Emulator`
-  loop.
+  screen is either the `Terminal`, or an SDL `Window`. Each frame the screen reports the
+  keys held down, and `Input` passes the ones that changed to the CPU.
+  `layout.cc` places the game and its how to play in the terminal, without SDL.
+  `args.cc` parses the command line into the `Args` the `Emulator` is built from, which
+  reads the ROM and its settings, so `src/main.cc` only runs the `Emulator`.
 
-The tests in `test/` cover the stack, the CPU's opcodes and quirks, the settings files and the
+The tests in `test/` cover the CPU's opcodes and quirks, the settings files and the
 terminal layout. They match the Rust and Go tests, so all three emulators are checked against
 the same behaviour.

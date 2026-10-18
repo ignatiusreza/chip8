@@ -7,7 +7,7 @@
 #include <string>
 #include "layout.h"
 #include "screen.h"
-#include "settings.h"
+#include "../chip8/rom.h"
 
 struct termios;
 
@@ -24,7 +24,6 @@ class Terminal : public Screen {
     // the terminal settings to restore
     std::unique_ptr<termios> _saved;
     std::array<Clock::time_point, 16> _lastPress;
-    std::array<bool, 16> _down{};
     bool _quit = false;
     int _width = 0, _height = 0;
 
@@ -39,8 +38,7 @@ class Terminal : public Screen {
     Terminal(const Terminal &) = delete;
     Terminal &operator=(const Terminal &) = delete;
 
-    void poll(CPU &cpu) override;
-    bool quitRequested() const override { return _quit; }
+    Keys keys() override;
 
     // redraws if the display changed or the terminal was resized, which lays the game and
     // how to play out again

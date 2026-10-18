@@ -1,6 +1,7 @@
-#include "settings.h"
+#include "rom.h"
 
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 static std::string trim(const std::string &s) {
@@ -24,7 +25,7 @@ bool parseSpeed(const std::string &value, int &speed) {
   return true;
 }
 
-bool parseRomSettings(const std::string &text, RomSettings &settings, std::string &error) {
+bool RomSettings::parse(const std::string &text, RomSettings &settings, std::string &error) {
   std::istringstream lines(text);
   std::string line;
   for(int number = 1; std::getline(lines, line); number++) {
@@ -69,7 +70,7 @@ bool parseRomSettings(const std::string &text, RomSettings &settings, std::strin
   return true;
 }
 
-std::string romSettingsPath(const std::string &romPath) {
+std::string RomSettings::path(const std::string &romPath) {
   // replace the extension of the file name, not of a directory
   size_t dot = romPath.find_last_of('.');
   size_t slash = romPath.find_last_of("/\\");
@@ -77,16 +78,30 @@ std::string romSettingsPath(const std::string &romPath) {
   return romPath.substr(0, dot) + ".cfg";
 }
 
-bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error) {
-  std::string path = romSettingsPath(romPath);
-  std::ifstream file(path);
+bool RomSettings::load(const std::string &romPath, RomSettings &settings, std::string &error) {
+  std::string settingsPath = path(romPath);
+  std::ifstream file(settingsPath);
   if(!file) return true; // the ROM runs with the defaults
 
   std::stringstream text;
   text << file.rdbuf();
-  if(!parseRomSettings(text.str(), settings, error)) {
-    error = path + ", " + error;
+  if(!parse(text.str(), settings, error)) {
+    error = settingsPath + ", " + error;
     return false;
   }
   return true;
+}
+
+bool Rom::load(const std::string &path, Rom &rom, std::string &error) {
+  std::ifstream file(path, std::ios_base::binary | std::ios_base::in);
+  if(!file) {
+    error = "Could not read " + path;
+    return false;
+  }
+  rom.data.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+  if(file.bad()) {
+    error = "Error Reading ROM";
+    return false;
+  }
+  return RomSettings::load(path, rom.settings, error);
 }

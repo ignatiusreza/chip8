@@ -133,3 +133,76 @@ layout of the original COSMAC VIP keypad, and quit on `Esc`:
 So `W` `A` `S` `D` are 5, 7, 8 and 9, which most games use for up, left, down and right (classic
 ones laid out for the VIP keypad use 2, 4, 6 and 8: `2` `Q` `E` `S`). It is the same layout as
 [Octo](https://github.com/JohnEarnest/Octo) and most other emulators.
+
+Architecture
+------------
+
+The three native ports are built the same way, with the core in a `chip8` directory and
+everything that touches the terminal, a window or the speaker in `frontend/` beside it. The
+names below are the C++ and Rust ones; Go's are the same in its own casing (e.g. `LoadRom`).
+
+```mermaid
+flowchart TB
+    main(["main"])
+
+    subgraph frontend["frontend/"]
+        args["Args<br/>the parsed command line"]
+        emulator["Emulator<br/>runs the frame loop"]
+        sound["Sound<br/>the beeper"]
+        input["Input<br/>sends changed keys"]
+        screen["Screen<br/>keys() and draw()"]
+        window["Window"]
+        terminal["Terminal"]
+        layout["layout<br/>places the game and how to play"]
+    end
+
+    subgraph core["chip8/"]
+        cpu["CPU + Quirks"]
+        rom["Rom + RomSettings<br/>the .ch8 file and its .cfg"]
+        keypad["Keypad"]
+        display["Display"]
+    end
+
+    main -->|parses| args
+    main -->|builds from Args, runs| emulator
+    emulator -->|Rom::load| rom
+    emulator -->|step, tick_timers| cpu
+    emulator --> input
+    emulator --> sound
+    emulator --> screen
+    window -.->|is a| screen
+    terminal -.->|is a| screen
+    terminal --> layout
+    input -->|set_key| cpu
+    screen -->|draws| display
+    cpu --> keypad
+    cpu --> display
+```
+
+The `Emulator` loads the `Rom`, and runs it with the quirks and speed given on the command
+line, otherwise the ones from the ROM's settings file, otherwise the defaults. Go has no
+`Screen` type, as Ebitengine runs the window's loop: its terminal and window each drive the
+`Emulator` instead. Every frame goes the same way:
+
+```mermaid
+sequenceDiagram
+    participant E as Emulator
+    participant C as CPU
+    participant S as Screen
+    participant I as Input
+
+    loop every 1/60s
+        E->>C: tick_timers()
+        C-->>E: whether to beep (to Sound)
+        E->>S: keys()
+        S-->>E: the keys held down
+        E->>I: update(keys)
+        I->>C: set_key() for the keys that changed
+        E->>C: step(), speed times
+        E->>S: draw(display), if it changed
+    end
+```
+
+The [web version](web/) reuses the Rust core: its WebAssembly module runs the same `CPU`, with
+the browser as the screen, keyboard and speaker, and its server lists the ROMs with
+`RomSettings::load`.

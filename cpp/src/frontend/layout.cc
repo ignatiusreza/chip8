@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <sstream>
-#include "../core/display.h"
+#include "../chip8/display.h"
 
 // the gap between the game and how to play beside it
 static constexpr int PANEL_GAP = 3;

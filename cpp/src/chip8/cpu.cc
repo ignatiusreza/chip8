@@ -314,7 +314,11 @@ void CPU::step() {
     case 0x0000:
       if(opcode == 0x00EE) { // return from a subroutine
         // with nothing to return to, restart the program rather than run the font data
-        PC = _stack.empty() ? PROGRAM_START : _stack.pop();
+        if(_stack.empty()) PC = PROGRAM_START;
+        else {
+          PC = _stack.back();
+          _stack.pop_back();
+        }
       }else {
         _x0000();
         PC += 2;
@@ -323,10 +327,9 @@ void CPU::step() {
     case 0x1000: // 1NNN (jump to NNN)
       PC = NNN;
       break;
-    case 0x2000: // 2NNN (call subroutine at NNN)
-      // i think this mean we push current address to stack then jump to NNN
+    case 0x2000: // 2NNN (call subroutine at NNN), the return address is dropped once the stack is full
       PC += 2;
-      _stack.push(PC);
+      if(_stack.size() < STACK_DEPTH) _stack.push_back(PC);
       PC = NNN;
       break;
     case 0x3000: // 3XNN (skip next inst if VX == NN), which mean double tick

@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use chip8::settings;
+use chip8::{rom, RomSettings};
 use serde::Serialize;
 
 /// A ROM, with its how to play and the quirks and speed it runs with.
@@ -33,7 +33,7 @@ pub fn load(dir: &Path) -> Result<Vec<Rom>, String> {
         let Some(name) = path.file_stem().and_then(|stem| stem.to_str()) else {
             continue;
         };
-        let rom_settings = settings::load(&path)?;
+        let rom_settings = RomSettings::load(&path)?;
         roms.push(Rom {
             name: name.to_string(),
             title: rom_settings.title.unwrap_or_else(|| name.to_string()),
@@ -42,9 +42,9 @@ pub fn load(dir: &Path) -> Result<Vec<Rom>, String> {
             controls: rom_settings.controls,
             quirks: rom_settings
                 .quirks
-                .unwrap_or_else(settings::default_quirks)
+                .unwrap_or_else(rom::default_quirks)
                 .to_string(),
-            speed: rom_settings.speed.unwrap_or(settings::DEFAULT_SPEED),
+            speed: rom_settings.speed.unwrap_or(rom::DEFAULT_SPEED),
         });
     }
     roms.sort_by_key(|rom| rom.title.to_lowercase());

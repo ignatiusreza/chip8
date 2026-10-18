@@ -9,8 +9,8 @@ option(CHIP8_BUILD_TESTS "Build the unit tests" ON)
 
 # The emulator core has no windowing or audio dependency, so it can be unit tested
 # on its own.
-add_library(chip8_core STATIC src/core/cpu.cc)
-target_include_directories(chip8_core PUBLIC src/core)
+add_library(chip8_core STATIC src/chip8/cpu.cc src/chip8/rom.cc)
+target_include_directories(chip8_core PUBLIC src/chip8)
 
 function(chip8_warnings target)
   if(MSVC)
@@ -39,13 +39,13 @@ endif()
 
 add_executable(chip8
   src/main.cc
+  src/frontend/args.cc
   src/frontend/emulator.cc
-  src/frontend/graphic.cc
   src/frontend/input.cc
   src/frontend/layout.cc
-  src/frontend/settings.cc
   src/frontend/sound.cc
   src/frontend/terminal.cc
+  src/frontend/window.cc
 )
 target_include_directories(chip8 PRIVATE src)
 target_link_libraries(chip8 PRIVATE chip8_core SDL3::SDL3)
@@ -66,9 +66,9 @@ if(CHIP8_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
   endif()
 
-  # the settings file parser and terminal layout have no SDL dependency either
-  add_executable(chip8_test test/cpu_test.cc test/layout_test.cc test/settings_test.cc test/stack_test.cc
-                 src/frontend/layout.cc src/frontend/settings.cc)
+  # the terminal layout has no SDL dependency either
+  add_executable(chip8_test test/cpu_test.cc test/layout_test.cc test/rom_test.cc
+                 src/frontend/layout.cc)
   target_include_directories(chip8_test PRIVATE src)
   target_link_libraries(chip8_test PRIVATE chip8_core GTest::gtest_main)
 

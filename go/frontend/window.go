@@ -2,7 +2,12 @@ package frontend
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/ignatiusreza/chip8/go/chip8"
 )
+
+// the window shows the 128x64 frame scaled 5x, so low resolution pixels are scaled 10x
+const scale = 5
 
 // keymap is the key for each CHIP-8 keypad value, laid out like the COSMAC
 // VIP keypad on the left of a QWERTY keyboard:
@@ -36,13 +41,20 @@ var keymap = [16]ebiten.Key{
 // drives it once per 1/60s tick.
 type window struct {
 	emulator *Emulator
-	graphic  *Graphic
+	image    *ebiten.Image
+	pixels   []byte
 }
 
 // runWindow opens the window and runs the emulator until it is closed or Esc is pressed.
 func runWindow(e *Emulator, title string) error {
 	ebiten.SetTPS(tps)
-	return ebiten.RunGame(&window{emulator: e, graphic: NewGraphic(title)})
+	ebiten.SetWindowTitle(title)
+	ebiten.SetWindowSize(chip8.FrameWidth*scale, chip8.FrameHeight*scale)
+	return ebiten.RunGame(&window{
+		emulator: e,
+		image:    ebiten.NewImage(chip8.FrameWidth, chip8.FrameHeight),
+		pixels:   make([]byte, chip8.FrameLength*4),
+	})
 }
 
 // Update runs one tick with the keys held down in the window.
@@ -59,11 +71,28 @@ func (w *window) Update() error {
 	return nil
 }
 
-// Draw updates the screen if invalidated.
+// Draw redraws the display into the window, re-reading the frame buffer only if it changed.
 func (w *window) Draw(screen *ebiten.Image) {
-	w.graphic.Draw(screen, w.emulator.cpu.Display())
+	if display := w.emulator.cpu.Display(); display.TakeInvalidated() {
+		for y := range chip8.FrameHeight {
+			for x := range chip8.FrameWidth {
+				var c byte
+				if display.Pixel(x, y) {
+					c = 0xFF
+				}
+				i := (x + y*chip8.FrameWidth) * 4
+				w.pixels[i], w.pixels[i+1], w.pixels[i+2], w.pixels[i+3] = c, c, c, 0xFF
+			}
+		}
+		w.image.WritePixels(w.pixels)
+	}
+
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scale, scale)
+	screen.DrawImage(w.image, op)
 }
 
+// Layout returns the window's logical size.
 func (w *window) Layout(int, int) (int, int) {
-	return w.graphic.Layout()
+	return chip8.FrameWidth * scale, chip8.FrameHeight * scale
 }

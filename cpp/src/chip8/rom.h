@@ -1,10 +1,10 @@
-#ifndef _CHIP8_FRONTEND_SETTINGS_H
-#define	_CHIP8_FRONTEND_SETTINGS_H
+#ifndef _CHIP8_CHIP8_ROM_H
+#define	_CHIP8_CHIP8_ROM_H
 
 #include <optional>
 #include <string>
 #include <vector>
-#include "../core/cpu.h"
+#include "cpu.h"
 
 // the settings used for a ROM that doesn't say otherwise
 static constexpr const char *DEFAULT_QUIRKS = "octo";
@@ -34,19 +34,29 @@ struct RomSettings {
   std::string author;
   std::vector<std::string> about;
   std::vector<std::string> controls;
+
+  // parses the text of a settings file; returns false and sets `error` if it is invalid
+  static bool parse(const std::string &text, RomSettings &settings, std::string &error);
+
+  // the path of the settings file for the ROM at `romPath`
+  static std::string path(const std::string &romPath);
+
+  // reads the settings file for the ROM at `romPath`, leaving `settings` empty if there is
+  // none; returns false and sets `error` if it can't be read or is invalid
+  static bool load(const std::string &romPath, RomSettings &settings, std::string &error);
 };
 
 // parses an opcodes per frame count, between 1 and MAX_SPEED
 bool parseSpeed(const std::string &value, int &speed);
 
-// parses the text of a settings file; returns false and sets `error` if it is invalid
-bool parseRomSettings(const std::string &text, RomSettings &settings, std::string &error);
+// A ROM read from a file, with its settings.
+struct Rom {
+  std::vector<unsigned char> data; // the program, loaded into memory at 0x200
+  RomSettings settings;
 
-// the path of the settings file for the ROM at `romPath`
-std::string romSettingsPath(const std::string &romPath);
+  // reads the ROM at `path`, and its settings file if it has one; returns false and sets
+  // `error` if either can't be read, or the settings are invalid
+  static bool load(const std::string &path, Rom &rom, std::string &error);
+};
 
-// reads the settings file for the ROM at `romPath`, leaving `settings` empty if there is
-// none; returns false and sets `error` if it can't be read or is invalid
-bool loadRomSettings(const std::string &romPath, RomSettings &settings, std::string &error);
-
-#endif	/* _CHIP8_FRONTEND_SETTINGS_H */
+#endif	/* _CHIP8_CHIP8_ROM_H */

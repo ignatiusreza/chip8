@@ -2,32 +2,9 @@
 // keyboard and speaker.
 package frontend
 
-import (
-	"fmt"
-
-	"github.com/ignatiusreza/chip8/go/chip8"
-)
+import "github.com/ignatiusreza/chip8/go/chip8"
 
 const tps = 60
-
-// Mode is where the display is shown and the keyboard read from.
-type Mode int
-
-const (
-	ModeTerminal Mode = iota // the terminal the emulator was started from (default)
-	ModeWindow               // a separate desktop window
-)
-
-// ParseMode parses a display mode name: "tui" (or "terminal"), or "window" (or "gui").
-func ParseMode(s string) (Mode, error) {
-	switch s {
-	case "tui", "terminal":
-		return ModeTerminal, nil
-	case "window", "gui":
-		return ModeWindow, nil
-	}
-	return 0, fmt.Errorf("unknown display %q, expected tui or window", s)
-}
 
 // Emulator is a CPU running a ROM, with its display, keypad and beeper hooked up.
 type Emulator struct {
@@ -38,24 +15,42 @@ type Emulator struct {
 	mode  Mode
 	// opcodes run per frame
 	speed int
-	// the ROM's how to play, shown next to the game in the terminal
-	howTo RomSettings
+	// the ROM's settings, with the quirks and speed it runs with, which the terminal shows
+	howTo chip8.RomSettings
 }
 
-// New loads the ROM and sets up the audio device; howTo is the ROM's settings, whose how
-// to play the terminal shows.
-func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int, howTo RomSettings) (*Emulator, error) {
+// New loads the ROM and its settings file, and sets up the audio device.
+func New(args *Args) (*Emulator, error) {
+	rom, err := chip8.LoadRom(args.RomPath)
+	if err != nil {
+		return nil, err
+	}
+	// the command line wins over the ROM's settings file, which wins over the defaults
+	howTo := rom.Settings
+	quirks, speed := chip8.DefaultQuirks, chip8.DefaultSpeed
+	if args.Quirks != nil {
+		quirks = *args.Quirks
+	} else if howTo.Quirks != nil {
+		quirks = *howTo.Quirks
+	}
+	if args.Speed != nil {
+		speed = *args.Speed
+	} else if howTo.Speed != nil {
+		speed = *howTo.Speed
+	}
+	howTo.Quirks, howTo.Speed = &quirks, &speed
+
 	cpu := chip8.NewCPU()
 	cpu.SetQuirks(quirks)
-	if err := cpu.Load(rom); err != nil {
+	if err := cpu.Load(rom.Data); err != nil {
 		return nil, err
 	}
 	return &Emulator{
 		cpu:   cpu,
 		input: &Input{},
 		sound: NewSound(),
-		title: title,
-		mode:  mode,
+		title: "Chip 8 : " + args.RomPath,
+		mode:  args.Mode,
 		speed: speed,
 		howTo: howTo,
 	}, nil

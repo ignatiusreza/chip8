@@ -1,5 +1,5 @@
-#ifndef _CHIP8_CORE_KEYPAD_H
-#define	_CHIP8_CORE_KEYPAD_H
+#ifndef _CHIP8_CHIP8_KEYPAD_H
+#define	_CHIP8_CHIP8_KEYPAD_H
 
 #include <bitset>
 
@@ -13,4 +13,4 @@ class Keypad {
     void set(int keyCode, bool pressed) { if(keyCode >= 0 && keyCode < 0x10) _state.set(keyCode, pressed); }
 };
 
-#endif	/* _CHIP8_CORE_KEYPAD_H */
+#endif	/* _CHIP8_CHIP8_KEYPAD_H */
