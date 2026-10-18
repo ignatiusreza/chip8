@@ -10,6 +10,8 @@ A simple [CHIP-8](http://en.wikipedia.org/wiki/CHIP-8) emulator, implemented in 
 All three draw in the terminal they are started from by default, and can open a separate
 window instead with `--display window`.
 
+A few freely licensed (CC0) ROMs to try them with are in [`roms/`](roms/).
+
 References for the bytecodes used is from :
 
 - http://en.wikipedia.org/wiki/CHIP-8
