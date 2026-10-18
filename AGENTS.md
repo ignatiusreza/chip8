@@ -26,9 +26,13 @@ emulator's behaviour is normally made in **all three**, with the matching test i
 - The core has no windowing or audio dependency in every port, so it builds and tests on its
   own; in Rust the frontend crates sit behind the default `frontend` feature, and the core
   builds with `default-features = false` (which is how `web/` uses it).
-- The frontend drives the core the same way everywhere. Each 1/60s frame it runs `speed`
-  opcodes (`step`), then calls `tick_timers`, which decrements DT/ST, reports whether to beep,
-  and ends the `vblank` quirk's wait. Key events go to `set_key(key, pressed)`.
+- The frontend drives the core the same way everywhere: `Emulator::run` (`Run` in Go) loops
+  over 1/60s frames, and each frame calls `tick_timers` (which decrements DT/ST, reports
+  whether to beep and ends the `vblank` quirk's wait), reads the keys, runs `speed` opcodes
+  (`step`), then draws. The `Screen` (terminal or window) reports the keys held down as
+  `Keys`, and `Input` passes the ones that changed to `set_key(key, pressed)`. Go has no
+  `Screen` type, as Ebitengine runs the window's loop: its window and terminal each call the
+  `Emulator`'s `tick` with their `Keys`.
 - Terminals mostly report only key presses, so the terminal frontends treat a key as held for
   200ms after its last press and then send a release (Rust uses exact releases when the
   terminal supports the kitty keyboard protocol).

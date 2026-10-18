@@ -22,7 +22,7 @@ Emulator::Emulator(const Options &options)
 }
 
 void Emulator::run() {
-  while(!_screen->quitRequested()) {
+  while(!_input.quitRequested()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(16));
     tick();
   }
@@ -31,12 +31,9 @@ void Emulator::run() {
 void Emulator::tick() {
   // play audio for as long as the sound timer runs
   _sound.setPlaying(_cpu.tickTimers());
+  _input.update(_screen->keys(), _cpu);
 
-  for(int i = 0;i < _speed;i++) {
-    // check for keyboard state
-    _screen->poll(_cpu);
-    _cpu.step();
-  }
+  for(int i = 0; i < _speed; i++) _cpu.step();
 
   // update screen if invalidated
   _screen->draw(_cpu.display());

@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include "../core/cpu.h"
+#include "input.h"
 #include "options.h"
 #include "screen.h"
 #include "sound.h"
@@ -11,6 +12,7 @@
 // A CPU running a ROM, with its display, keypad and beeper hooked up.
 class Emulator {
   CPU     _cpu;
+  Input   _input;
   // opened before the screen, as it may log to the terminal
   Sound   _sound;
   std::unique_ptr<Screen> _screen;
@@ -25,8 +27,7 @@ class Emulator {
     void run();
 
   private:
-    // runs one ~1/60s frame: timers, then the opcodes (handling input before each), then
-    // the screen
+    // runs one ~1/60s frame: timers, keyboard, a few opcodes, then the screen
     void tick();
 };
 

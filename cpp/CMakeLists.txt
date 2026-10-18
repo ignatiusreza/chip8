@@ -46,6 +46,7 @@ add_executable(chip8
   src/frontend/options.cc
   src/frontend/sound.cc
   src/frontend/terminal.cc
+  src/frontend/window.cc
 )
 target_include_directories(chip8 PRIVATE src)
 target_link_libraries(chip8 PRIVATE chip8_core SDL3::SDL3)

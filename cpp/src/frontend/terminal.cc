@@ -11,7 +11,7 @@ Terminal::Terminal(const std::string &, const RomSettings &) {
   throw std::runtime_error("the terminal display isn't supported on Windows, use --display window");
 }
 Terminal::~Terminal() = default;
-void Terminal::poll(CPU &) {}
+Keys Terminal::keys() { return Keys(); }
 void Terminal::draw(Display &) {}
 void Terminal::handle(const unsigned char *, int) {}
 
@@ -91,20 +91,16 @@ Terminal::~Terminal() {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, _saved.get());
 }
 
-void Terminal::poll(CPU &cpu) {
+Keys Terminal::keys() {
   unsigned char buf[64];
   int length;
   while((length = read(STDIN_FILENO, buf, sizeof(buf))) > 0) handle(buf, length);
 
-  // only report changes, so FX0A waits for a fresh keypress
   Clock::time_point now = Clock::now();
-  for(int k = 0; k < 16; k++) {
-    bool down = _lastPress[k] != Clock::time_point() && now - _lastPress[k] < HOLD;
-    if(down != _down[k]) {
-      _down[k] = down;
-      cpu.setKey(k, down);
-    }
-  }
+  Keys keys;
+  for(int k = 0; k < 16; k++) keys.down[k] = _lastPress[k] != Clock::time_point() && now - _lastPress[k] < HOLD;
+  keys.quit = _quit;
+  return keys;
 }
 
 void Terminal::handle(const unsigned char *buf, int length) {
