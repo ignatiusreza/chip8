@@ -38,10 +38,13 @@ type Emulator struct {
 	mode  Mode
 	// opcodes run per frame
 	speed int
+	// the ROM's how to play, shown next to the game in the terminal
+	howTo RomSettings
 }
 
-// New loads the ROM and sets up the audio device.
-func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int) (*Emulator, error) {
+// New loads the ROM and sets up the audio device; howTo is the ROM's settings, whose how
+// to play the terminal shows.
+func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int, howTo RomSettings) (*Emulator, error) {
 	cpu := chip8.NewCPU()
 	cpu.SetQuirks(quirks)
 	if err := cpu.Load(rom); err != nil {
@@ -54,6 +57,7 @@ func New(title string, rom []byte, mode Mode, quirks chip8.Quirks, speed int) (*
 		title: title,
 		mode:  mode,
 		speed: speed,
+		howTo: howTo,
 	}, nil
 }
 
@@ -63,7 +67,7 @@ func (e *Emulator) Run() error {
 	if e.mode == ModeWindow {
 		return runWindow(e, e.title)
 	}
-	return runTerminal(e, e.title)
+	return runTerminal(e, e.title, e.howTo)
 }
 
 // tick runs one 1/60s tick: timers, keyboard, then a few opcodes. It reports false once

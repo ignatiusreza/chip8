@@ -14,6 +14,8 @@ use crossterm::terminal::{
 use crossterm::{execute, queue};
 
 use super::input::Keys;
+use super::layout::{game_columns, game_rows, Layout};
+use super::settings::RomSettings;
 use super::{Result, Screen};
 
 const FRAME: Duration = Duration::from_nanos(1_000_000_000 / 60);
@@ -38,12 +40,6 @@ const KEYMAP: [char; 16] = [
 ];
 
 // the display plus a one character border, and a title line above it
-// a character cell holds 2x2 low resolution pixels, or 2x4 high resolution ones
-const CELLS_WIDE: usize = Display::FRAME_WIDTH / 2;
-const CELLS_HIGH: usize = Display::FRAME_HEIGHT / 4;
-const COLUMNS: u16 = CELLS_WIDE as u16 + 2;
-const ROWS: u16 = CELLS_HIGH as u16 + 3;
-
 /// The braille character showing the 2x4 high resolution pixels at (x, y).
 fn braille(display: &Display, x: usize, y: usize) -> char {
     // the bit of each dot, by column then row
@@ -59,9 +55,9 @@ fn braille(display: &Display, x: usize, y: usize) -> char {
     char::from_u32(0x2800 + bits).unwrap_or(' ')
 }
 
-/// The half block showing two low resolution pixels, one above the other.
-fn half_block(display: &Display, x: usize, y: usize) -> char {
-    match (display.get(x, y), display.get(x, y + 1)) {
+/// The half block showing two pixels, one above the other.
+fn half_block(top: bool, bottom: bool) -> char {
+    match (top, bottom) {
         (true, true) => '█',
         (true, false) => '▀',
         (false, true) => '▄',
@@ -69,11 +65,13 @@ fn half_block(display: &Display, x: usize, y: usize) -> char {
     }
 }
 
-/// The terminal the emulator was started from, showing the 64x32 display as 64x16
-/// half-block characters and reading the keyboard.
+/// The terminal the emulator was started from, showing the display and the ROM's how to
+/// play, centred, and reading the keyboard.
 pub struct Terminal {
     out: Stdout,
     title: String,
+    how_to: RomSettings,
+    layout: Layout,
     // whether the terminal reports key releases (kitty keyboard protocol)
     release_events: bool,
     held: [bool; 16],
@@ -85,8 +83,9 @@ pub struct Terminal {
 
 impl Terminal {
     /// Switches the terminal to raw mode and an alternate screen, which are restored
-    /// when the Terminal is dropped.
-    pub fn new(title: &str) -> Result<Self> {
+    /// when the Terminal is dropped. `how_to` is the ROM's settings, whose how to play is
+    /// shown next to the game.
+    pub fn new(title: &str, how_to: &RomSettings) -> Result<Self> {
         if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
             return Err(
                 "the terminal display needs an interactive terminal, try --display window".into(),
@@ -98,6 +97,8 @@ impl Terminal {
         let mut term = Terminal {
             out: io::stdout(),
             title: title.to_string(),
+            how_to: how_to.clone(),
+            layout: Layout::default(),
             release_events: false,
             held: [false; 16],
             last_press: [None; 16],
@@ -147,35 +148,74 @@ impl Terminal {
 
     /// Draws the whole screen; each frame overwrites the last, so the terminal only
     /// needs clearing when resized.
-    fn render(&mut self, display: &Display, clear: bool) -> io::Result<()> {
-        if clear {
+    /// Draws the display. When resized, lays the game and how to play out again and
+    /// draws the title, border and how to play, which only change then.
+    fn render(&mut self, display: &Display, resized: bool) -> io::Result<()> {
+        if resized {
+            let (columns, rows) = terminal::size()?;
+            self.layout = Layout::new(columns.into(), rows.into(), &self.how_to);
             queue!(self.out, Clear(ClearType::All))?;
         }
-        queue!(self.out, MoveTo(0, 0))?;
-        let (columns, rows) = terminal::size()?;
-        if columns < COLUMNS || rows < ROWS {
-            write!(self.out, "Terminal too small, needs {COLUMNS}x{ROWS}")?;
+        let l = &self.layout;
+        if !l.fits {
+            if resized {
+                queue!(self.out, MoveTo(0, 0))?;
+                write!(
+                    self.out,
+                    "Terminal too small, needs {}x{}",
+                    game_columns(1),
+                    game_rows(1)
+                )?;
+            }
             return self.out.flush();
         }
 
-        write!(self.out, "{} (Esc to quit)", self.title)?;
-        queue!(self.out, MoveTo(0, 1))?;
-        write!(self.out, "┌{}┐", "─".repeat(CELLS_WIDE))?;
-        for row in 0..CELLS_HIGH {
-            queue!(self.out, MoveTo(0, row as u16 + 2))?;
-            let line: String = (0..CELLS_WIDE)
+        let (cells_wide, cells_high) = (game_columns(l.scale) - 2, game_rows(l.scale) - 3);
+        let move_to = |x: usize, y: usize| MoveTo(x as u16, y as u16);
+        if resized {
+            let title: String = format!("{} (Esc to quit)", self.title)
+                .chars()
+                .take(cells_wide + 2)
+                .collect();
+            let border = "─".repeat(cells_wide);
+            queue!(self.out, move_to(l.game_x, l.game_y))?;
+            write!(self.out, "{title}")?;
+            queue!(self.out, move_to(l.game_x, l.game_y + 1))?;
+            write!(self.out, "┌{border}┐")?;
+            for row in 0..cells_high {
+                queue!(self.out, move_to(l.game_x, l.game_y + 2 + row))?;
+                write!(self.out, "│")?;
+                queue!(
+                    self.out,
+                    move_to(l.game_x + cells_wide + 1, l.game_y + 2 + row)
+                )?;
+                write!(self.out, "│")?;
+            }
+            queue!(self.out, move_to(l.game_x, l.game_y + cells_high + 2))?;
+            write!(self.out, "└{border}┘")?;
+            for (i, line) in l.panel.iter().enumerate() {
+                queue!(self.out, move_to(l.panel_x, l.panel_y + i))?;
+                write!(self.out, "{line}")?;
+            }
+        }
+
+        for row in 0..cells_high {
+            queue!(self.out, move_to(l.game_x + 1, l.game_y + 2 + row))?;
+            let line: String = (0..cells_wide)
                 .map(|col| {
-                    if display.hires() {
+                    if l.scale == 2 {
+                        // two frame pixels, one above the other
+                        half_block(display.pixel(col, row * 2), display.pixel(col, row * 2 + 1))
+                    } else if display.hires() {
                         braille(display, col * 2, row * 4)
                     } else {
-                        half_block(display, col, row * 2)
+                        // two low resolution pixels, one above the other
+                        half_block(display.get(col, row * 2), display.get(col, row * 2 + 1))
                     }
                 })
                 .collect();
-            write!(self.out, "│{line}│")?;
+            write!(self.out, "{line}")?;
         }
-        queue!(self.out, MoveTo(0, ROWS - 1))?;
-        write!(self.out, "└{}┘", "─".repeat(CELLS_WIDE))?;
         self.out.flush()
     }
 }

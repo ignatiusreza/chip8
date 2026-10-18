@@ -2,6 +2,7 @@
 //! speaker.
 
 mod input;
+mod layout;
 pub mod settings;
 mod sound;
 mod terminal;
@@ -58,13 +59,15 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    /// Loads the ROM, then opens the audio device and the screen.
+    /// Loads the ROM, then opens the audio device and the screen. `how_to` is the ROM's
+    /// settings, whose how to play the terminal shows.
     pub fn new(
         title: &str,
         rom: &[u8],
         mode: DisplayMode,
         quirks: Quirks,
         speed: u32,
+        how_to: &settings::RomSettings,
     ) -> Result<Self> {
         let mut cpu = Cpu::new();
         cpu.set_quirks(quirks);
@@ -72,7 +75,7 @@ impl Emulator {
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
         let screen: Box<dyn Screen> = match mode {
-            DisplayMode::Terminal => Box::new(Terminal::new(title)?),
+            DisplayMode::Terminal => Box::new(Terminal::new(title, how_to)?),
             DisplayMode::Window => Box::new(Window::new(title)?),
         };
         Ok(Emulator {

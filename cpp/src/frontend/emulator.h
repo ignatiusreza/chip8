@@ -5,6 +5,7 @@
 #include <string>
 #include "../core/cpu.h"
 #include "screen.h"
+#include "settings.h"
 #include "sound.h"
 
 // Where the display is shown and the keyboard read from.
@@ -23,8 +24,8 @@ class Emulator {
 
   public:
     // opens the audio device and the screen; throws std::runtime_error if the screen
-    // can't be opened
-    Emulator(const std::string &title, DisplayMode mode);
+    // can't be opened. `howTo` is the ROM's settings, whose how to play the terminal shows.
+    Emulator(const std::string &title, DisplayMode mode, const RomSettings &howTo);
 
     void setQuirks(const Quirks &quirks) { _cpu.setQuirks(quirks); }
     // sets how many opcodes run per frame

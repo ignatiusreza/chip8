@@ -21,7 +21,7 @@ pub const DEFAULT_QUIRKS: &str = "octo";
 pub const DEFAULT_SPEED: u32 = 15;
 pub const MAX_SPEED: u32 = 10000;
 
-#[derive(Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RomSettings {
     pub quirks: Option<Quirks>,
     pub speed: Option<u32>,

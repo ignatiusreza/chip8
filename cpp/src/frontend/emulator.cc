@@ -4,13 +4,14 @@
 #include "terminal.h"
 #include "window.h"
 
-static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode mode) {
+static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode mode,
+                                          const RomSettings &howTo) {
   if(mode == DisplayMode::Window) return std::make_unique<Window>(title);
-  return std::make_unique<Terminal>(title);
+  return std::make_unique<Terminal>(title, howTo);
 }
 
-Emulator::Emulator(const std::string &title, DisplayMode mode)
-    : _screen(openScreen(title, mode)), _speed(DEFAULT_SPEED) {}
+Emulator::Emulator(const std::string &title, DisplayMode mode, const RomSettings &howTo)
+    : _screen(openScreen(title, mode, howTo)), _speed(DEFAULT_SPEED) {}
 
 void Emulator::tick() {
   // play audio for as long as the sound timer runs

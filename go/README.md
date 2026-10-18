@@ -11,7 +11,7 @@ world, like the C++ `Graphic`, `Input` and `Sound` classes, using
 [x/term](https://pkg.go.dev/golang.org/x/term) for the terminal display and keyboard,
 [Ebitengine](https://ebitengine.org) for the window display and keyboard, and
 [oto](https://github.com/ebitengine/oto) for the beeper; it also reads a ROM's settings
-file. `main.go` just parses the flags, reads the ROM and its settings, and runs the
+file and places the game and its how to play in the terminal. `main.go` just parses the flags, reads the ROM and its settings, and runs the
 `Emulator`.
 
 Building
@@ -39,8 +39,9 @@ and the tests with
 
     go test ./...
 
-The terminal display is drawn as 64x16 half-block characters (braille in the SUPER-CHIP high
-resolution) inside a border, which needs a terminal of at least 66x19. Terminals only report
+The terminal display is centred, with the ROM's how to play beside or below it, and is double
+size in a terminal of at least 130x35; it needs at least 66x19 (see the
+[top-level README](../README.md)). Terminals only report
 key presses (repeated while held), not releases, so a key counts as held for 200ms after its
 last press.
 

@@ -65,7 +65,14 @@ fn main() -> frontend::Result<()> {
         .speed
         .or(rom_settings.speed)
         .unwrap_or(settings::DEFAULT_SPEED);
-    let mut emulator = Emulator::new(&format!("Chip 8 : {rom_path}"), &rom, mode, quirks, speed)?;
+    let mut emulator = Emulator::new(
+        &format!("Chip 8 : {rom_path}"),
+        &rom,
+        mode,
+        quirks,
+        speed,
+        &rom_settings,
+    )?;
 
     while emulator.is_running() {
         emulator.tick()?;

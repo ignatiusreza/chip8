@@ -11,6 +11,13 @@ than one language.
 All three draw in the terminal they are started from by default, and can open a separate
 window instead with `--display window`.
 
+In the terminal, the game is centred, with the ROM's [how to play](#rom-settings) next to it, or
+below it when the terminal is too narrow. A terminal of at least 130x35 shows the game at double
+size: 128x32 characters, each showing 1x2 high resolution pixels as a half block. Smaller ones
+show it as 64x16 characters, each showing 2x2 low resolution pixels as half blocks, or 2x4 high
+resolution pixels as a braille character; that needs at least 66x19. The layout follows the
+terminal when it is resized.
+
 Freely licensed (CC0) ROMs to try them with are in [`roms/`](roms/), each with the
 [settings](#rom-settings) it needs.
 
@@ -29,9 +36,8 @@ Besides the original instruction set, the emulators run the
 
 Like in [Octo](https://github.com/JohnEarnest/Octo), scrolling in low resolution moves whole
 low resolution pixels, `DXY0` draws 16x16 sprites in either resolution, and a collision sets
-`VF` to 1 rather than counting the colliding rows. The window shows both resolutions at the
-same size; in the terminal, high resolution is drawn with braille characters, 2x4 pixels to a
-character, so it fits the same 66x19 terminal.
+`VF` to 1 rather than counting the colliding rows. Both resolutions are shown at the same
+size, in the window and in the terminal.
 
 Quirks
 ------
@@ -101,8 +107,7 @@ starting with `#` are comments:
 
 Without `--quirks` or `--speed`, the emulators run the ROM with the quirks and speed from its
 settings file, or the defaults for those it doesn't give. The other settings describe how to
-play, for an emulator or a person to show alongside the game; the emulators here read them but
-don't display them yet.
+play, which the terminal shows next to the game.
 
 References for the bytecodes used is from :
 

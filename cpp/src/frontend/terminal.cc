@@ -7,7 +7,7 @@
 
 struct termios {};
 
-Terminal::Terminal(const std::string &) {
+Terminal::Terminal(const std::string &, const RomSettings &) {
   throw std::runtime_error("the terminal display isn't supported on Windows, use --display window");
 }
 Terminal::~Terminal() = default;
@@ -37,12 +37,15 @@ static constexpr auto HOLD = std::chrono::milliseconds(200);
 // so W A S D are 5 7 8 9, the up, left, down and right of most games
 static constexpr char KEYMAP[] = "x123qweasdzc4rfv";
 
-// the display plus a one character border, and a title line above it
-// a character cell holds 2x2 low resolution pixels, or 2x4 high resolution ones
-static constexpr int CELLS_WIDE = Display::FRAME_WIDTH / 2;
-static constexpr int CELLS_HIGH = Display::FRAME_HEIGHT / 4;
-static constexpr int COLUMNS = CELLS_WIDE + 2;
-static constexpr int ROWS = CELLS_HIGH + 3;
+// the half block showing two pixels, one above the other
+static const char *halfBlock(bool top, bool bottom) {
+  return top && bottom ? "█" : top ? "▀" : bottom ? "▄" : " ";
+}
+
+// moves the cursor to the 0-based column x and row y
+static std::string moveTo(int x, int y) {
+  return "\x1b[" + std::to_string(y + 1) + ";" + std::to_string(x + 1) + "H";
+}
 
 // the braille character showing the 2x4 high resolution pixels at (x, y)
 static std::string braille(const Display &display, int x, int y) {
@@ -64,7 +67,7 @@ static void writeOut(const std::string &s) {
   }
 }
 
-Terminal::Terminal(const std::string &title) : _title(title) {
+Terminal::Terminal(const std::string &title, const RomSettings &howTo) : _title(title), _howTo(howTo) {
   if(!isatty(STDIN_FILENO) || !isatty(STDOUT_FILENO)) {
     throw std::runtime_error("the terminal display needs an interactive terminal, try --display window");
   }
@@ -128,33 +131,49 @@ void Terminal::draw(Display &display) {
   _height = size.ws_row;
   if(!display.takeInvalidated() && !resized) return;
 
-  // each frame overwrites the last, so the terminal only needs clearing when resized
-  std::string out = resized ? "\x1b[2J\x1b[H" : "\x1b[H";
-  if(_width < COLUMNS || _height < ROWS) {
-    out += "Terminal too small, needs " + std::to_string(COLUMNS) + "x" + std::to_string(ROWS);
-    writeOut(out);
+  // the title, border and how to play are only drawn when resized, which clears the screen
+  std::string out;
+  const Layout &l = _layout;
+  int cellsWide = gameColumns(l.scale) - 2, cellsHigh = gameRows(l.scale) - 3;
+  if(resized) {
+    _layout = layoutTerminal(_width, _height, _howTo);
+    cellsWide = gameColumns(l.scale) - 2;
+    cellsHigh = gameRows(l.scale) - 3;
+    out += "\x1b[2J";
+    if(!l.fits) {
+      out += "\x1b[HTerminal too small, needs " + std::to_string(gameColumns(1)) + "x" + std::to_string(gameRows(1));
+      writeOut(out);
+      return;
+    }
+
+    std::string title = prefix(_title + " (Esc to quit)", cellsWide + 2), border;
+    for(int x = 0; x < cellsWide; x++) border += "─";
+    out += moveTo(l.gameX, l.gameY) + title;
+    out += moveTo(l.gameX, l.gameY + 1) + "┌" + border + "┐";
+    for(int row = 0; row < cellsHigh; row++) {
+      out += moveTo(l.gameX, l.gameY + 2 + row) + "│";
+      out += moveTo(l.gameX + cellsWide + 1, l.gameY + 2 + row) + "│";
+    }
+    out += moveTo(l.gameX, l.gameY + cellsHigh + 2) + "└" + border + "┘";
+    for(std::size_t i = 0; i < l.panel.size(); i++) out += moveTo(l.panelX, l.panelY + i) + l.panel[i];
+  } else if(!l.fits) {
     return;
   }
 
-  std::string border;
-  for(int x = 0; x < CELLS_WIDE; x++) border += "─";
-
-  out += _title + " (Esc to quit)\r\n";
-  out += "┌" + border + "┐\r\n";
-  for(int row = 0; row < CELLS_HIGH; row++) {
-    out += "│";
-    for(int col = 0; col < CELLS_WIDE; col++) {
-      if(display.hires()) {
+  for(int row = 0; row < cellsHigh; row++) {
+    out += moveTo(l.gameX + 1, l.gameY + 2 + row);
+    for(int col = 0; col < cellsWide; col++) {
+      if(l.scale == 2) {
+        // two frame pixels, one above the other
+        out += halfBlock(display.pixel(col, row * 2), display.pixel(col, row * 2 + 1));
+      } else if(display.hires()) {
         out += braille(display, col * 2, row * 4);
       } else {
-        // two low resolution pixels, one above the other, as half blocks
-        bool top = display.get(col, row * 2), bottom = display.get(col, row * 2 + 1);
-        out += top && bottom ? "█" : top ? "▀" : bottom ? "▄" : " ";
+        // two low resolution pixels, one above the other
+        out += halfBlock(display.get(col, row * 2), display.get(col, row * 2 + 1));
       }
     }
-    out += "│\r\n";
   }
-  out += "└" + border + "┘";
   writeOut(out);
 }
 
