@@ -31,7 +31,7 @@ button:hover { border-color: var(--fg); }
 #viewers { color: var(--muted); }
 
 /* the game and its how to play side by side when there is room, stacked otherwise */
-#game { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: center; }
+#game { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: center; container-type: inline-size; }
 #screen-area { flex: 1 1 512px; max-width: 768px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
 #screen {
   width: 100%;
@@ -49,6 +49,13 @@ button:hover { border-color: var(--fg); }
 #panel h2 { font-size: 1em; margin: 1em 0 0.25em; }
 #panel ul { list-style: none; padding: 0; margin: 0; }
 #panel .running { color: var(--muted); margin-top: 1em; }
+#panel h2:first-child { margin-top: 0; }
+
+/* Below the screen (too narrow to sit beside it: 512 + 24 + 300 pixels) but wide enough,
+   how to play spans the screen's width, with the description and the controls side by side. */
+@container (min-width: 600px) and (max-width: 835px) {
+  #panel { flex-basis: 100%; max-width: 768px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+}
 
 /* the hex keypad, laid out like the COSMAC VIP's, for touch screens */
 #keypad { display: grid; grid-template-columns: repeat(4, 3.2em); gap: 6px; }

@@ -70,30 +70,29 @@ const beeper = {
   },
 }
 
+// how to play: what the game is, and its controls with the quirks and speed it runs with,
+// which the page may show side by side
 function panel(rom, quirks, speed) {
-  const element = $('panel')
-  element.replaceChildren()
-  const add = (tag, text, className) => {
+  const about = document.createElement('section')
+  const play = document.createElement('section')
+  $('panel').replaceChildren(about, play)
+  const add = (parent, tag, text, className) => {
     const child = document.createElement(tag)
     child.textContent = text
     if (className) child.className = className
-    return element.appendChild(child)
+    return parent.appendChild(child)
   }
   if (rom) {
-    add('h1', rom.title)
-    if (rom.author) add('p', `by ${rom.author}`, 'author')
-    for (const line of rom.about) add('p', line)
+    add(about, 'h1', rom.title)
+    if (rom.author) add(about, 'p', `by ${rom.author}`, 'author')
+    for (const line of rom.about) add(about, 'p', line)
     if (rom.controls.length) {
-      add('h2', 'Controls')
-      const list = add('ul', '')
-      for (const line of rom.controls) {
-        const item = document.createElement('li')
-        item.textContent = line
-        list.appendChild(item)
-      }
+      add(play, 'h2', 'Controls')
+      const list = add(play, 'ul', '')
+      for (const line of rom.controls) add(list, 'li', line)
     }
   }
-  const running = add('div', '', 'running')
+  const running = add(play, 'div', '', 'running')
   running.append(`Quirks: ${quirks}`, document.createElement('br'), `Speed: ${speed} opcodes per frame`)
 }
 
