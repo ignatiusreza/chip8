@@ -17,9 +17,16 @@ import (
 // before the terminal starts repeating it.
 const hold = 200 * time.Millisecond
 
-// termKeymap is the character for each CHIP-8 keypad value, on the left side of a QWERTY
-// keyboard.
-const termKeymap = "1qweasdzxcrfvtgb"
+// termKeymap is the character for each CHIP-8 keypad value, laid out like the COSMAC
+// VIP keypad on the left of a QWERTY keyboard:
+//
+//	1 2 3 4        1 2 3 C
+//	Q W E R   ->   4 5 6 D
+//	A S D F        7 8 9 E
+//	Z X C V        A 0 B F
+//
+// so W A S D are 5 7 8 9, the up, left, down and right of most games
+const termKeymap = "x123qweasdzc4rfv"
 
 // the display plus a one character border, and a title line above it
 const (

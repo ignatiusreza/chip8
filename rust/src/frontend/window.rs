@@ -8,24 +8,30 @@ const FPS: usize = 60;
 const BLACK: u32 = 0x000000;
 const WHITE: u32 = 0xFFFFFF;
 
-// CHIP-8 keypad value for each index, mapped onto the left side of a QWERTY keyboard
+// key for each CHIP-8 keypad value, laid out like the COSMAC
+// VIP keypad on the left of a QWERTY keyboard:
+//   1 2 3 4        1 2 3 C
+//   Q W E R   ->   4 5 6 D
+//   A S D F        7 8 9 E
+//   Z X C V        A 0 B F
+// so W A S D are 5 7 8 9, the up, left, down and right of most games
 const KEYMAP: [Key; 16] = [
-    Key::Key1, // 0
-    Key::Q,    // 1
-    Key::W,    // 2
-    Key::E,    // 3
-    Key::A,    // 4
-    Key::S,    // 5
-    Key::D,    // 6
-    Key::Z,    // 7
-    Key::X,    // 8
-    Key::C,    // 9
-    Key::R,    // A
-    Key::F,    // B
-    Key::V,    // C
-    Key::T,    // D
-    Key::G,    // E
-    Key::B,    // F
+    Key::X,    // 0
+    Key::Key1, // 1
+    Key::Key2, // 2
+    Key::Key3, // 3
+    Key::Q,    // 4
+    Key::W,    // 5
+    Key::E,    // 6
+    Key::A,    // 7
+    Key::S,    // 8
+    Key::D,    // 9
+    Key::Z,    // A
+    Key::C,    // B
+    Key::Key4, // C
+    Key::R,    // D
+    Key::F,    // E
+    Key::V,    // F
 ];
 
 /// A desktop window, showing the 128x64 frame scaled 4x (so low resolution pixels are

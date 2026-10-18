@@ -23,24 +23,31 @@ void Input::poll(CPU &cpu) {
   }
 }
 
+// the keypad value for each key, laid out like the COSMAC
+// VIP keypad on the left of a QWERTY keyboard:
+//   1 2 3 4        1 2 3 C
+//   Q W E R   ->   4 5 6 D
+//   A S D F        7 8 9 E
+//   Z X C V        A 0 B F
+// so W A S D are 5 7 8 9, the up, left, down and right of most games
 int Input::keypadValue(SDL_Scancode key) {
   switch( key ){
-    case SDL_SCANCODE_1: return 0x0;
-    case SDL_SCANCODE_Q: return 0x1;
-    case SDL_SCANCODE_W: return 0x2;
-    case SDL_SCANCODE_E: return 0x3;
-    case SDL_SCANCODE_A: return 0x4;
-    case SDL_SCANCODE_S: return 0x5;
-    case SDL_SCANCODE_D: return 0x6;
-    case SDL_SCANCODE_Z: return 0x7;
-    case SDL_SCANCODE_X: return 0x8;
-    case SDL_SCANCODE_C: return 0x9;
-    case SDL_SCANCODE_R: return 0xA;
-    case SDL_SCANCODE_F: return 0xB;
-    case SDL_SCANCODE_V: return 0xC;
-    case SDL_SCANCODE_T: return 0xD;
-    case SDL_SCANCODE_G: return 0xE;
-    case SDL_SCANCODE_B: return 0xF;
+    case SDL_SCANCODE_1: return 0x1;
+    case SDL_SCANCODE_2: return 0x2;
+    case SDL_SCANCODE_3: return 0x3;
+    case SDL_SCANCODE_4: return 0xC;
+    case SDL_SCANCODE_Q: return 0x4;
+    case SDL_SCANCODE_W: return 0x5;
+    case SDL_SCANCODE_E: return 0x6;
+    case SDL_SCANCODE_R: return 0xD;
+    case SDL_SCANCODE_A: return 0x7;
+    case SDL_SCANCODE_S: return 0x8;
+    case SDL_SCANCODE_D: return 0x9;
+    case SDL_SCANCODE_F: return 0xE;
+    case SDL_SCANCODE_Z: return 0xA;
+    case SDL_SCANCODE_X: return 0x0;
+    case SDL_SCANCODE_C: return 0xB;
+    case SDL_SCANCODE_V: return 0xF;
     default: return -1;
   }
 }

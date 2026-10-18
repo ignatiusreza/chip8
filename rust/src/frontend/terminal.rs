@@ -23,12 +23,18 @@ const FRAME: Duration = Duration::from_nanos(1_000_000_000 / 60);
 // bridges the gap before the terminal starts repeating it.
 const HOLD: Duration = Duration::from_millis(200);
 
-// CHIP-8 keypad value for each index, mapped onto the left side of a QWERTY keyboard
+// character for each CHIP-8 keypad value, laid out like the COSMAC
+// VIP keypad on the left of a QWERTY keyboard:
+//   1 2 3 4        1 2 3 C
+//   Q W E R   ->   4 5 6 D
+//   A S D F        7 8 9 E
+//   Z X C V        A 0 B F
+// so W A S D are 5 7 8 9, the up, left, down and right of most games
 const KEYMAP: [char; 16] = [
-    '1', 'q', 'w', 'e', // 0 1 2 3
-    'a', 's', 'd', 'z', // 4 5 6 7
-    'x', 'c', 'r', 'f', // 8 9 A B
-    'v', 't', 'g', 'b', // C D E F
+    'x', '1', '2', '3', // 0 1 2 3
+    'q', 'w', 'e', 'a', // 4 5 6 7
+    's', 'd', 'z', 'c', // 8 9 A B
+    '4', 'r', 'f', 'v', // C D E F
 ];
 
 // the display plus a one character border, and a title line above it

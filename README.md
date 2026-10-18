@@ -94,9 +94,14 @@ References for the bytecodes used is from :
 Keyboard
 --------
 
-All implementations map the 16-key hex keypad to the same keys, and quit on `Esc`:
+All implementations map the 16-key hex keypad to the left of a QWERTY keyboard, keeping the
+layout of the original COSMAC VIP keypad, and quit on `Esc`:
 
-    1 Q W E        0 1 2 3
-    A S D Z   ->   4 5 6 7
-    X C R F        8 9 A B
-    V T G B        C D E F
+    1 2 3 4        1 2 3 C
+    Q W E R   ->   4 5 6 D
+    A S D F        7 8 9 E
+    Z X C V        A 0 B F
+
+So `W` `A` `S` `D` are 5, 7, 8 and 9, which most games use for up, left, down and right (classic
+ones laid out for the VIP keypad use 2, 4, 6 and 8: `2` `Q` `E` `S`). It is the same layout as
+[Octo](https://github.com/JohnEarnest/Octo) and most other emulators.

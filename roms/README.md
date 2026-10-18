@@ -51,28 +51,16 @@ and speed it was made for. The table shows them, with `-` for the default.
 Controls
 --------
 
-The games were written in [Octo](https://github.com/JohnEarnest/Octo), so their own instructions
-refer to Octo's keyboard layout. With the keypad mapping used here (see the top-level README),
-Octo's keys are at:
+The games were written in [Octo](https://github.com/JohnEarnest/Octo), which uses the same
+[keyboard layout](../README.md#keyboard) as these emulators, so the keys in their own
+instructions work as they are. Most move with `W` `A` `S` `D` and act with `E`. For example:
 
-| Octo key   | 1 | 2 | 3 | 4 | Q | W | E | R | A | S | D | F | Z | X | C | V |
-|------------|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Keypad     | 1 | 2 | 3 | C | 4 | 5 | 6 | D | 7 | 8 | 9 | E | A | 0 | B | F |
-| Press here | Q | W | E | V | A | S | D | T | Z | X | C | G | R | 1 | F | B |
-
-Most games move with Octo's `W` `A` `S` `D` (here `S` `Z` `X` `C`) and act with `E` (here `D`).
-For example:
-
-- **Br8kout** - `Z` / `C` move the paddle left / right.
-- **Flight Runner** - `S` / `X` / `Z` / `C` move up / down / left / right.
-- **Super Pong** - `S` / `X` move the vertical paddle, `Z` / `C` the horizontal one, and `D`
+- **Br8kout** - `A` / `D` move the paddle left / right.
+- **Flight Runner** - `W` / `S` / `A` / `D` move up / down / left / right.
+- **Super Pong** - `W` / `S` move the vertical paddle, `A` / `D` the horizontal one, and `E`
   resets. Press any key to start.
-- **Mini Lights Out** - each key toggles the light in the same spot of the 4x4 grid:
-
-      Q W E V
-      A S D T
-      Z X C G
-      R 1 F B
+- **Mini Lights Out** - each of `1`-`4`, `Q`-`R`, `A`-`F` and `Z`-`V` toggles the light in the
+  same spot of the 4x4 grid.
 
 Run them with, for example:
 
