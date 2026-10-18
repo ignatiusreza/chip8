@@ -2,10 +2,11 @@
 #define	_CHIP8_FRONTEND_EMULATOR_H
 
 #include <memory>
+#include <optional>
 #include <string>
 #include "../chip8/cpu.h"
+#include "args.h"
 #include "input.h"
-#include "options.h"
 #include "screen.h"
 #include "sound.h"
 
@@ -13,15 +14,15 @@
 class Emulator {
   CPU     _cpu;
   Input   _input;
-  // opened before the screen, as it may log to the terminal
-  Sound   _sound;
+  // opened once the ROM is loaded, before the screen as it may log to the terminal
+  std::optional<Sound> _sound;
   std::unique_ptr<Screen> _screen;
   int     _speed;
 
   public:
-    // loads the ROM, then opens the audio device and the screen; throws
-    // std::runtime_error if the screen can't be opened
-    explicit Emulator(const Options &options);
+    // loads the ROM and its settings file, then opens the audio device and the screen;
+    // throws std::runtime_error if the ROM can't be loaded or the screen opened
+    explicit Emulator(const Args &args);
 
     // runs the ROM until Esc is pressed or the window is closed
     void run();

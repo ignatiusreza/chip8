@@ -1,6 +1,5 @@
-//! The command line options, with the ROM and its settings file.
+//! The command line arguments.
 
-use std::path::Path;
 use std::str::FromStr;
 
 use chip8::{settings, Quirks};
@@ -41,25 +40,20 @@ impl FromStr for DisplayMode {
     }
 }
 
-/// What to run and how: the command line, with the ROM and its settings file.
-pub struct Options {
+/// The command line: the ROM to run and how.
+pub struct Args {
     pub rom_path: String,
-    pub rom: Vec<u8>,
     pub mode: DisplayMode,
-    /// The quirks the ROM runs with: from the command line, otherwise its settings file,
-    /// otherwise the defaults.
-    pub quirks: Quirks,
-    /// The opcodes run per frame, chosen like the quirks.
-    pub speed: u32,
-    /// The ROM's settings file, with those quirks and speed, for the terminal to show.
-    pub settings: settings::RomSettings,
+    /// The quirks and speed to run the ROM with, if given, instead of the ones from its
+    /// settings file.
+    pub quirks: Option<Quirks>,
+    pub speed: Option<u32>,
 }
 
-impl Options {
-    /// Parses the command line (`args` starting with the program name), then reads the ROM
-    /// and its settings file. Returns `None` if there is nothing to run, after printing the
-    /// usage.
-    pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Option<Options>> {
+impl Args {
+    /// Parses the command line, `args` starting with the program name. Returns `None` if
+    /// there is nothing to run, after printing the usage.
+    pub fn parse(mut args: impl Iterator<Item = String>) -> Result<Option<Args>> {
         let program = args.next().unwrap_or_else(|| "chip8".into());
         let usage = USAGE
             .replace("{}", &program)
@@ -67,7 +61,6 @@ impl Options {
             .replace("{speed}", &settings::DEFAULT_SPEED.to_string());
 
         let mut mode = DisplayMode::default();
-        // set from the command line, otherwise from the ROM's settings file
         let (mut quirks, mut speed) = (None, None);
         let mut rom_path = None;
         while let Some(arg) = args.next() {
@@ -91,24 +84,11 @@ impl Options {
             return Ok(None);
         };
 
-        let rom =
-            std::fs::read(&rom_path).map_err(|e| format!("Could not read {rom_path}: {e}"))?;
-        let settings = settings::load(Path::new(&rom_path))?;
-        let quirks = quirks
-            .or(settings.quirks)
-            .unwrap_or_else(settings::default_quirks);
-        let speed = speed.or(settings.speed).unwrap_or(settings::DEFAULT_SPEED);
-        Ok(Some(Options {
+        Ok(Some(Args {
             rom_path,
-            rom,
             mode,
             quirks,
             speed,
-            settings: settings::RomSettings {
-                quirks: Some(quirks),
-                speed: Some(speed),
-                ..settings
-            },
         }))
     }
 }

@@ -1,11 +1,13 @@
-use chip8::Cpu;
+use std::path::Path;
+
+use chip8::{settings, Cpu};
 
 use super::input::Input;
 use super::screen::Screen;
 use super::sound::Sound;
 use super::terminal::Terminal;
 use super::window::Window;
-use super::{DisplayMode, Options, Result};
+use super::{Args, DisplayMode, Result};
 
 /// A CPU running a ROM, with its display, keypad and beeper hooked up.
 pub struct Emulator {
@@ -18,16 +20,37 @@ pub struct Emulator {
 }
 
 impl Emulator {
-    /// Loads the ROM, then opens the audio device and the screen.
-    pub fn new(options: &Options) -> Result<Self> {
+    /// Loads the ROM and its settings file, then opens the audio device and the screen.
+    pub fn new(args: &Args) -> Result<Self> {
+        let rom_path = &args.rom_path;
+        let rom = std::fs::read(rom_path).map_err(|e| format!("Could not read {rom_path}: {e}"))?;
+        // the command line wins over the ROM's settings file, which wins over the defaults
+        let settings = settings::load(Path::new(rom_path))?;
+        let quirks = args
+            .quirks
+            .or(settings.quirks)
+            .unwrap_or_else(settings::default_quirks);
+        let speed = args
+            .speed
+            .or(settings.speed)
+            .unwrap_or(settings::DEFAULT_SPEED);
+
         let mut cpu = Cpu::new();
-        cpu.set_quirks(options.quirks);
-        cpu.load(&options.rom)?;
+        cpu.set_quirks(quirks);
+        cpu.load(&rom)?;
         // open the audio device first, as it may log to the terminal
         let sound = Sound::new();
-        let title = format!("Chip 8 : {}", options.rom_path);
-        let screen: Box<dyn Screen> = match options.mode {
-            DisplayMode::Terminal => Box::new(Terminal::new(&title, &options.settings)?),
+        let title = format!("Chip 8 : {rom_path}");
+        let screen: Box<dyn Screen> = match args.mode {
+            // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
+            DisplayMode::Terminal => Box::new(Terminal::new(
+                &title,
+                &settings::RomSettings {
+                    quirks: Some(quirks),
+                    speed: Some(speed),
+                    ..settings
+                },
+            )?),
             DisplayMode::Window => Box::new(Window::new(&title)?),
         };
         Ok(Emulator {
@@ -35,7 +58,7 @@ impl Emulator {
             input: Input::default(),
             sound,
             screen,
-            speed: options.speed,
+            speed,
         })
     }
 

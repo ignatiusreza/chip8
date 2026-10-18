@@ -13,9 +13,9 @@ world, like the C++ `Graphic`, `Input` and `Sound` classes, using pure-Rust crat
 [minifb](https://crates.io/crates/minifb) for the window display and keyboard, and
 [rodio](https://crates.io/crates/rodio) for the beeper; they are only needed by the `chip8`
 binary, behind the default `frontend` feature. `src/frontend/layout.rs` places the game and
-its how to play in the terminal, and `src/frontend/options.rs` parses the command line and
-reads the ROM and its settings into the `Options` the `Emulator` runs, so `src/main.rs` only
-runs the `Emulator`.
+its how to play in the terminal, and `src/frontend/args.rs` parses the command line into
+the `Args` the `Emulator` is built from, which reads the ROM and its settings, so
+`src/main.rs` only runs the `Emulator`.
 
 Building
 --------

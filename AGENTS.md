@@ -21,7 +21,7 @@ them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths
 | ROM settings files | `cpp/src/chip8/settings.{h,cc}` | `rust/src/chip8/settings.rs` | `go/chip8/settings.go` |
 | Terminal layout | `cpp/src/frontend/layout.{h,cc}` | `rust/src/frontend/layout.rs` | `go/frontend/layout.go` |
 | Terminal, window, input, sound | `cpp/src/frontend/` (SDL3) | `rust/src/frontend/` (crossterm, minifb, rodio) | `go/frontend/` (x/term, Ebitengine, oto) |
-| Command line options | `cpp/src/frontend/options.{h,cc}` | `rust/src/frontend/options.rs` | `go/frontend/options.go` |
+| Command line arguments | `cpp/src/frontend/args.{h,cc}` | `rust/src/frontend/args.rs` | `go/frontend/args.go` |
 | Emulator loop | `cpp/src/frontend/emulator.{h,cc}` | `rust/src/frontend/emulator.rs` | `go/frontend/emulator.go` |
 
 - The tests are ports of each other, with the same names in each language's style
@@ -40,12 +40,14 @@ them. Rust's `lib.rs` only re-exports the `chip8` module, so the library's paths
 - Terminals mostly report only key presses, so the terminal frontends treat a key as held for
   200ms after its last press and then send a release (Rust uses exact releases when the
   terminal supports the kitty keyboard protocol).
-- Options are `--display tui|window`, `--quirks LIST`, `--speed N` (single dash in Go).
-  Without them, quirks and speed come from the ROM's `.cfg` settings file next to it, then the
-  defaults (`octo`, 15).
-- Keep each `main` compact: it only gets the `Options`, builds the `Emulator` from them and
-  runs it. Parsing, usage text, reading the ROM and settings, and other setup belong in the
-  options module (or the frontend), not in `main`.
+- The arguments are `--display tui|window`, `--quirks LIST`, `--speed N` (single dash in
+  Go), parsed into `Args` by the `args` module, which only parses (no file I/O). The
+  `Emulator` constructor reads the ROM and its `.cfg` settings file and picks the quirks and
+  speed: the command line wins over the settings file, which wins over the defaults (`octo`,
+  15).
+- Keep each `main` compact: it only parses the `Args`, builds the `Emulator` from them and
+  runs it. Parsing and usage text belong in the `args` module, and reading the ROM and
+  settings and other setup in the `Emulator`, not in `main`.
 
 ## Web
 

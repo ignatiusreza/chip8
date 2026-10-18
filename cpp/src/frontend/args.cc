@@ -1,9 +1,7 @@
-#include "options.h"
+#include "args.h"
 
-#include <fstream>
 #include <iostream>
-#include <iterator>
-#include <optional>
+#include "../chip8/settings.h"
 
 // Windows has no terminal display, so it defaults to the window
 #ifdef _WIN32
@@ -52,26 +50,6 @@ static bool parseSpeedOption(const std::string &value, int &speed) {
   return true;
 }
 
-// reads the whole ROM file, printing why it failed if it couldn't
-static bool readRom(const std::string &filename, std::vector<unsigned char> &rom) {
-  std::ifstream file(filename, std::ios_base::binary | std::ios_base::in);
-  if(!file) {
-    std::cout << "Could not read " << filename << std::endl;
-    return false;
-  }
-
-  rom.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
-  if(file.bad()) {
-    std::cout << "Error Reading ROM" << std::endl;
-    return false;
-  }
-  if(rom.size() > CPU::MAX_ROM_SIZE) {
-    std::cout << "ROM is too large, at most " << CPU::MAX_ROM_SIZE << " bytes fit in memory" << std::endl;
-    return false;
-  }
-  return true;
-}
-
 // Whether argv[i] is option `name`, given as "--name=VALUE" or "--name VALUE"; sets `value`
 // and moves `i` past it, or leaves `value` unset (printing why) if it's missing.
 static bool option(int argc, char *argv[], int &i, const std::string &name, std::optional<std::string> &value) {
@@ -86,28 +64,25 @@ static bool option(int argc, char *argv[], int &i, const std::string &name, std:
   return true;
 }
 
-bool parseOptions(int argc, char *argv[], Options &options, int &status) {
+bool parseArgs(int argc, char *argv[], Args &args, int &status) {
   status = 1;
-  options.mode = DEFAULT_MODE;
-  // set from the command line, otherwise from the ROM's settings file
-  std::optional<Quirks> quirks;
-  std::optional<int> speed;
+  args.mode = DEFAULT_MODE;
   bool hasRom = false;
   for(int i = 1; i < argc; i++) {
     std::string arg = argv[i];
     std::optional<std::string> value;
     if(option(argc, argv, i, "--display", value)) {
-      if(!value || !parseMode(*value, options.mode)) return false;
+      if(!value || !parseMode(*value, args.mode)) return false;
     } else if(option(argc, argv, i, "--quirks", value)) {
-      if(!value || !parseQuirks(*value, quirks.emplace())) return false;
+      if(!value || !parseQuirks(*value, args.quirks.emplace())) return false;
     } else if(option(argc, argv, i, "--speed", value)) {
-      if(!value || !parseSpeedOption(*value, speed.emplace())) return false;
+      if(!value || !parseSpeedOption(*value, args.speed.emplace())) return false;
     } else if(arg == "-h" || arg == "--help") {
       usage(argv[0]);
       status = 0;
       return false;
     } else if(!hasRom) {
-      options.romPath = arg;
+      args.romPath = arg;
       hasRom = true;
     } else {
       std::cout << "unexpected argument \"" << arg << "\"\n\n";
@@ -121,16 +96,6 @@ bool parseOptions(int argc, char *argv[], Options &options, int &status) {
     return false;
   }
 
-  if(!readRom(options.romPath, options.rom)) return false;
-  std::string error;
-  if(!loadRomSettings(options.romPath, options.settings, error)) {
-    std::cout << error << std::endl;
-    return false;
-  }
-  options.quirks = quirks.value_or(options.settings.quirks.value_or(defaultQuirks()));
-  options.speed = speed.value_or(options.settings.speed.value_or(DEFAULT_SPEED));
-  options.settings.quirks = options.quirks;
-  options.settings.speed = options.speed;
   status = 0;
   return true;
 }

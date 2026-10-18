@@ -1,11 +1,24 @@
 #include "emulator.h"
 
 #include <chrono>
+#include <fstream>
+#include <iterator>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 #include "../chip8/settings.h"
 #include "terminal.h"
 #include "window.h"
+
+// reads the whole ROM file; throws std::runtime_error if it can't
+static std::vector<unsigned char> readRom(const std::string &path) {
+  std::ifstream file(path, std::ios_base::binary | std::ios_base::in);
+  if(!file) throw std::runtime_error("Could not read " + path);
+  std::vector<unsigned char> rom(std::istreambuf_iterator<char>(file), {});
+  if(file.bad()) throw std::runtime_error("Error Reading ROM");
+  return rom;
+}
 
 static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode mode,
                                           const RomSettings &howTo) {
@@ -13,12 +26,24 @@ static std::unique_ptr<Screen> openScreen(const std::string &title, DisplayMode 
   return std::make_unique<Terminal>(title, howTo);
 }
 
-Emulator::Emulator(const Options &options)
-    : _screen(openScreen("Chip 8 : " + options.romPath, options.mode, options.settings)),
-      _speed(options.speed) {
-  _cpu.setQuirks(options.quirks);
-  // parseOptions already checked that it fits
-  _cpu.load(options.rom.data(), options.rom.size());
+Emulator::Emulator(const Args &args) {
+  std::vector<unsigned char> rom = readRom(args.romPath);
+  // the command line wins over the ROM's settings file, which wins over the defaults
+  RomSettings howTo;
+  std::string error;
+  if(!loadRomSettings(args.romPath, howTo, error)) throw std::runtime_error(error);
+  Quirks quirks = args.quirks.value_or(howTo.quirks.value_or(defaultQuirks()));
+  _speed = args.speed.value_or(howTo.speed.value_or(DEFAULT_SPEED));
+  // the terminal shows the quirks and speed the ROM runs with, alongside its how to play
+  howTo.quirks = quirks;
+  howTo.speed = _speed;
+
+  _cpu.setQuirks(quirks);
+  if(!_cpu.load(rom.data(), rom.size())) {
+    throw std::runtime_error("ROM is too large, at most " + std::to_string(CPU::MAX_ROM_SIZE) + " bytes fit in memory");
+  }
+  _sound.emplace();
+  _screen = openScreen("Chip 8 : " + args.romPath, args.mode, howTo);
 }
 
 void Emulator::run() {
@@ -30,7 +55,7 @@ void Emulator::run() {
 
 void Emulator::tick() {
   // play audio for as long as the sound timer runs
-  _sound.setPlaying(_cpu.tickTimers());
+  _sound->setPlaying(_cpu.tickTimers());
   _input.update(_screen->keys(), _cpu);
 
   for(int i = 0; i < _speed; i++) _cpu.step();

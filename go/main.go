@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	options, err := frontend.ParseOptions(os.Args)
+	args, err := frontend.ParseArgs(os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if options == nil {
+	if args == nil {
 		return // printed the usage
 	}
-	emulator, err := frontend.New(options)
+	emulator, err := frontend.New(args)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,7 +3,6 @@ package frontend
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/ignatiusreza/chip8/go/chip8"
 )
@@ -27,24 +26,20 @@ func parseMode(s string) (Mode, error) {
 	return 0, fmt.Errorf("unknown display %q, expected tui or window", s)
 }
 
-// Options are what to run and how: the command line, with the ROM and its settings file.
-type Options struct {
+// Args are the command line: the ROM to run and how.
+type Args struct {
 	RomPath string
-	Rom     []byte
 	Mode    Mode
-	// the quirks and speed the ROM runs with: from the command line, otherwise its
-	// settings file, otherwise the defaults
-	Quirks chip8.Quirks
-	Speed  int
-	// the ROM's settings file, with those quirks and speed, for the terminal to show
-	Settings chip8.RomSettings
+	// the quirks and speed to run the ROM with, if given (non-nil), instead of the ones
+	// from its settings file
+	Quirks *chip8.Quirks
+	Speed  *int
 }
 
-// ParseOptions parses the command line (args starting with the program name), then reads
-// the ROM and its settings file. It returns nil if there is nothing to run, after printing
-// the usage; like the flag package, it exits after printing the usage for -h or an
-// unknown flag.
-func ParseOptions(args []string) (*Options, error) {
+// ParseArgs parses the command line, args starting with the program name. It returns nil
+// if there is nothing to run, after printing the usage; like the flag package, it exits
+// after printing the usage for -h or an unknown flag.
+func ParseArgs(args []string) (*Args, error) {
 	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
 	display := flags.String("display", "tui", "where to show the display: tui (this terminal) or window")
 	quirkList := flags.String("quirks", "", "comma separated presets (octo, vip, schip) and quirks\n(shift, load-store, vf-reset, jump-v0, wrap, vblank) to turn on, starting from the default")
@@ -60,39 +55,24 @@ func ParseOptions(args []string) (*Options, error) {
 		flags.Usage()
 		return nil, nil
 	}
-	mode, err := parseMode(*display)
-	if err != nil {
+	parsed := &Args{RomPath: flags.Arg(0)}
+	var err error
+	if parsed.Mode, err = parseMode(*display); err != nil {
 		return nil, err
 	}
-
-	path := flags.Arg(0)
-	rom, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("Could not read %s: %v", path, err)
-	}
-
-	// the command line wins over the ROM's settings file, which wins over the defaults
-	romSettings, err := chip8.LoadRomSettings(path)
-	if err != nil {
-		return nil, err
-	}
-	quirks := chip8.DefaultQuirks
 	if *quirkList != "" {
-		quirks, err = chip8.DefaultQuirks.Apply(*quirkList)
-	} else if romSettings.Quirks != nil {
-		quirks = *romSettings.Quirks
+		quirks, err := chip8.DefaultQuirks.Apply(*quirkList)
+		if err != nil {
+			return nil, err
+		}
+		parsed.Quirks = &quirks
 	}
-	if err != nil {
-		return nil, err
-	}
-	speed := chip8.DefaultSpeed
 	if *speedValue != "" {
-		if speed, err = chip8.ParseSpeed(*speedValue); err != nil {
+		speed, err := chip8.ParseSpeed(*speedValue)
+		if err != nil {
 			return nil, fmt.Errorf("-%w", err)
 		}
-	} else if romSettings.Speed != nil {
-		speed = *romSettings.Speed
+		parsed.Speed = &speed
 	}
-	romSettings.Quirks, romSettings.Speed = &quirks, &speed
-	return &Options{RomPath: path, Rom: rom, Mode: mode, Quirks: quirks, Speed: speed, Settings: romSettings}, nil
+	return parsed, nil
 }

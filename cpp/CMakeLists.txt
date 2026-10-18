@@ -39,11 +39,11 @@ endif()
 
 add_executable(chip8
   src/main.cc
+  src/frontend/args.cc
   src/frontend/emulator.cc
   src/frontend/graphic.cc
   src/frontend/input.cc
   src/frontend/layout.cc
-  src/frontend/options.cc
   src/frontend/sound.cc
   src/frontend/terminal.cc
   src/frontend/window.cc
