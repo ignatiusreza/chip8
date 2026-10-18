@@ -1,7 +1,15 @@
-//! What a ROM needs to run well, read from the settings file next to it: the ROM's path
-//! with its extension replaced by ".cfg". Each line holds "quirks = LIST" (the same list
-//! as --quirks) or "speed = N" (opcodes per frame); blank lines and lines starting with
-//! "#" are ignored. Settings that aren't given use the defaults.
+//! What a ROM needs to run well, and how to play it, read from the settings file next to
+//! it: the ROM's path with its extension replaced by ".cfg". Each line holds "name = value":
+//!
+//! - `quirks = LIST`: the same list as --quirks
+//! - `speed = N`: opcodes per frame
+//! - `title = TEXT`: the game's name
+//! - `author = TEXT`: who made it
+//! - `about = TEXT`: what the game is and how to win, a line of text per setting
+//! - `controls = TEXT`: a key and what it does, e.g. "A / D: move left / right", per setting
+//!
+//! Blank lines and lines starting with "#" are ignored. Quirks and speed that aren't given
+//! use the defaults.
 
 use std::path::{Path, PathBuf};
 
@@ -17,6 +25,10 @@ pub const MAX_SPEED: u32 = 10000;
 pub struct RomSettings {
     pub quirks: Option<Quirks>,
     pub speed: Option<u32>,
+    pub title: Option<String>,
+    pub author: Option<String>,
+    pub about: Vec<String>,
+    pub controls: Vec<String>,
 }
 
 /// The default quirks, which quirk lists on the command line and in settings files start
@@ -53,12 +65,17 @@ pub fn parse(text: &str) -> Result<RomSettings, String> {
         let (name, value) = line
             .split_once('=')
             .ok_or_else(|| at("expected \"name = value\"".into()))?;
+        let value = value.trim();
         match name.trim() {
-            "quirks" => settings.quirks = Some(parse_quirks(value.trim()).map_err(at)?),
-            "speed" => settings.speed = Some(parse_speed(value.trim()).map_err(at)?),
+            "quirks" => settings.quirks = Some(parse_quirks(value).map_err(at)?),
+            "speed" => settings.speed = Some(parse_speed(value).map_err(at)?),
+            "title" => settings.title = Some(value.into()),
+            "author" => settings.author = Some(value.into()),
+            "about" => settings.about.push(value.into()),
+            "controls" => settings.controls.push(value.into()),
             name => {
                 return Err(at(format!(
-                    "unknown setting {name:?}, expected quirks or speed"
+                    "unknown setting {name:?}, expected quirks, speed, title, author, about or controls"
                 )))
             }
         }
@@ -122,13 +139,31 @@ mod tests {
             .starts_with("line 1: unknown quirk \"bogus\""));
         assert_eq!(
             parse("colour = green\n").unwrap_err(),
-            "line 1: unknown setting \"colour\", expected quirks or speed"
+            "line 1: unknown setting \"colour\", expected quirks, speed, title, author, about or controls"
         );
         assert_eq!(
             parse("speed\n").unwrap_err(),
             "line 1: expected \"name = value\""
         );
         assert!(parse("speed = 0\n").is_err());
+    }
+
+    #[test]
+    fn parses_how_to_play() {
+        let settings = parse(concat!(
+            "title = Br8kout\nauthor = SharpenedSpoon\n",
+            "about = Break the bricks.\nabout = Don't miss the ball.\n",
+            "controls = A / D: move left / right\ncontrols = E: serve\n",
+        ))
+        .unwrap();
+        assert_eq!(settings.title.as_deref(), Some("Br8kout"));
+        assert_eq!(settings.author.as_deref(), Some("SharpenedSpoon"));
+        assert_eq!(
+            settings.about,
+            ["Break the bricks.", "Don't miss the ball."]
+        );
+        assert_eq!(settings.controls, ["A / D: move left / right", "E: serve"]);
+        assert_eq!((settings.quirks, settings.speed), (None, None));
     }
 
     #[test]

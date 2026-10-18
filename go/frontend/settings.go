@@ -20,13 +20,26 @@ const (
 	MaxSpeed     = 10000
 )
 
-// RomSettings is what a ROM needs to run well, read from the settings file next to it:
-// the ROM's path with its extension replaced by ".cfg". Each line holds "quirks = LIST"
-// (the same list as -quirks) or "speed = N" (opcodes per frame); blank lines and lines
-// starting with "#" are ignored. Settings that aren't given (nil) use the defaults.
+// RomSettings is what a ROM needs to run well, and how to play it, read from the settings
+// file next to it: the ROM's path with its extension replaced by ".cfg". Each line holds
+// "name = value":
+//
+//	quirks = LIST     the same list as -quirks
+//	speed = N         opcodes per frame
+//	title = TEXT      the game's name
+//	author = TEXT     who made it
+//	about = TEXT      what the game is and how to win, a line of text per setting
+//	controls = TEXT   a key and what it does, e.g. "A / D: move left / right", per setting
+//
+// Blank lines and lines starting with "#" are ignored. Quirks and speed that aren't given
+// (nil) use the defaults.
 type RomSettings struct {
-	Quirks *chip8.Quirks
-	Speed  *int
+	Quirks   *chip8.Quirks
+	Speed    *int
+	Title    string
+	Author   string
+	About    []string
+	Controls []string
 }
 
 // ParseQuirks parses a quirk list, starting from the default quirks, so e.g. "vf-reset"
@@ -73,8 +86,16 @@ func ParseRomSettings(text string) (RomSettings, error) {
 				return RomSettings{}, fmt.Errorf("line %d: %w", i+1, err)
 			}
 			settings.Speed = &speed
+		case "title":
+			settings.Title = value
+		case "author":
+			settings.Author = value
+		case "about":
+			settings.About = append(settings.About, value)
+		case "controls":
+			settings.Controls = append(settings.Controls, value)
 		default:
-			return RomSettings{}, fmt.Errorf("line %d: unknown setting %q, expected quirks or speed", i+1, name)
+			return RomSettings{}, fmt.Errorf("line %d: unknown setting %q, expected quirks, speed, title, author, about or controls", i+1, name)
 		}
 	}
 	return settings, nil

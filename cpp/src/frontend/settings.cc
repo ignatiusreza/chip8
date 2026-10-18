@@ -53,8 +53,16 @@ bool parseRomSettings(const std::string &text, RomSettings &settings, std::strin
         return false;
       }
       settings.speed = speed;
+    } else if(name == "title") {
+      settings.title = value;
+    } else if(name == "author") {
+      settings.author = value;
+    } else if(name == "about") {
+      settings.about.push_back(value);
+    } else if(name == "controls") {
+      settings.controls.push_back(value);
     } else {
-      error = where + "unknown setting \"" + name + "\", expected quirks or speed";
+      error = where + "unknown setting \"" + name + "\", expected quirks, speed, title, author, about or controls";
       return false;
     }
   }

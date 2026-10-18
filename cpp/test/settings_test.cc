@@ -2,6 +2,7 @@
 // (rust/src/frontend/settings.rs) versions.
 
 #include <string>
+#include <vector>
 #include <gtest/gtest.h>
 #include "frontend/settings.h"
 
@@ -42,10 +43,25 @@ TEST(SettingsTest, RejectsInvalidSettings) {
   EXPECT_FALSE(parseRomSettings("quirks = bogus\n", settings, error));
   EXPECT_EQ(error, "line 1: unknown quirk \"bogus\"");
   EXPECT_FALSE(parseRomSettings("colour = green\n", settings, error));
-  EXPECT_EQ(error, "line 1: unknown setting \"colour\", expected quirks or speed");
+  EXPECT_EQ(error, "line 1: unknown setting \"colour\", expected quirks, speed, title, author, about or controls");
   EXPECT_FALSE(parseRomSettings("speed\n", settings, error));
   EXPECT_EQ(error, "line 1: expected \"name = value\"");
   EXPECT_FALSE(parseRomSettings("speed = 0\n", settings, error));
+}
+
+TEST(SettingsTest, ParsesHowToPlay) {
+  RomSettings settings;
+  std::string error;
+  ASSERT_TRUE(parseRomSettings(
+      "title = Br8kout\nauthor = SharpenedSpoon\n"
+      "about = Break the bricks.\nabout = Don't miss the ball.\n"
+      "controls = A / D: move left / right\ncontrols = E: serve\n", settings, error)) << error;
+  EXPECT_EQ(settings.title, "Br8kout");
+  EXPECT_EQ(settings.author, "SharpenedSpoon");
+  EXPECT_EQ(settings.about, (std::vector<std::string>{"Break the bricks.", "Don't miss the ball."}));
+  EXPECT_EQ(settings.controls, (std::vector<std::string>{"A / D: move left / right", "E: serve"}));
+  EXPECT_FALSE(settings.quirks.has_value());
+  EXPECT_FALSE(settings.speed.has_value());
 }
 
 TEST(SettingsTest, PathReplacesTheExtension) {

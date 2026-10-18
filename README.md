@@ -79,16 +79,30 @@ often want 100 or more.
 ROM settings
 ------------
 
-Without `--quirks` or `--speed`, the emulators read them from the ROM's settings file, if it
-has one: the ROM's path with its extension replaced by `.cfg`, e.g. `roms/dinorun.cfg` for
-`roms/dinorun.ch8`. Each line sets `quirks` (a list like `--quirks`) or `speed`, and lines
+A ROM can have a settings file next to it: the ROM's path with its extension replaced by
+`.cfg`, e.g. `roms/dinorun.cfg` for `roms/dinorun.ch8`. Each line is `name = value`, and lines
 starting with `#` are comments:
 
-    # Dino Run by Andrezinrc, from the Chip8 Community Archive
+    # from the Chip8 Community Archive, CC0
+    title = Dino Run
+    author = Andrezinrc
+    about = Endless runner: jump over the obstacles for as long as you can.
+    controls = W: start, jump, and restart after a crash
     quirks = vip
 
-A setting that isn't given uses the default, so a ROM that runs well with the defaults needs
-no file.
+| Setting    | Value                                                                 |
+|------------|-----------------------------------------------------------------------|
+| `quirks`   | the [quirks](#quirks) the ROM needs, a list like `--quirks`           |
+| `speed`    | the [speed](#speed) it needs, in opcodes per frame                    |
+| `title`    | the game's name                                                       |
+| `author`   | who made it                                                           |
+| `about`    | what the game is and how to win; repeat it for more lines             |
+| `controls` | a key and what it does, e.g. `A / D: move left / right`; one per key  |
+
+Without `--quirks` or `--speed`, the emulators run the ROM with the quirks and speed from its
+settings file, or the defaults for those it doesn't give. The other settings describe how to
+play, for an emulator or a person to show alongside the game; the emulators here read them but
+don't display them yet.
 
 References for the bytecodes used is from :
 

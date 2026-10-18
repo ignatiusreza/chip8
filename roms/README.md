@@ -8,18 +8,26 @@ archive, including these ROMs, is released under the
 license, so they can be redistributed freely. The source code for each program lives in the
 archive's `src/` directory.
 
-Settings
---------
+Settings and how to play
+------------------------
 
-Each ROM that doesn't run well with the default [quirks](../README.md#quirks) (`octo`) and
-[speed](../README.md#speed) (15 opcodes per frame) has a settings file next to it, with the
-same name and a `.cfg` extension, which the emulators read when they load the ROM:
+Each ROM has a [settings file](../README.md#rom-settings) next to it, with the same name and a
+`.cfg` extension. It says how to play, and which [quirks](../README.md#quirks) and
+[speed](../README.md#speed) the ROM needs when they differ from the defaults (`octo`, 15
+opcodes per frame); the emulators use those when they load the ROM:
 
-    # Dino Run by Andrezinrc, from the Chip8 Community Archive
-    quirks = vip
+    # from the Chip8 Community Archive, CC0
+    title = Br8kout
+    author = SharpenedSpoon
+    about = Breakout: bounce the ball off your paddle to break all the bricks.
+    about = Don't let the ball reach the bottom of the screen.
+    controls = A / D: move the paddle left / right
+    speed = 7
 
-The settings come from each program's entry in the archive, which records the Octo quirk flags
-and speed it was made for. The table shows them, with `-` for the default.
+The quirks and speed come from each program's entry in the archive, which records the Octo
+quirk flags and speed it was made for, except Tick, whose own readme also asks for `vblank`.
+The how to play comes from the program's readme in the archive where it has one, and
+otherwise from its source. The table shows the quirks and speed, with `-` for the default.
 
 | ROM | Title | Author | Platform | Quirks | Speed | Description |
 |-----|-------|--------|----------|--------|-------|-------------|
@@ -45,7 +53,7 @@ and speed it was made for. The table shows them, with `-` for the default.
 | `superpong.ch8` | Super Pong | offstatic | CHIP-8 | - | 30 | A fast pong-like |
 | `sweetcopter.ch8` | Sw8 Copter | JohnEarnest | SUPER-CHIP | - | 100 | An adaptation of "Swing Copters" for the Super Chip8 |
 | `binding.ch8` | The Binding of COSMAC | buffi | SUPER-CHIP | schip,shift,load-store,jump-v0 | 1000 | Simplified Isaac demake for SCHIP |
-| `tick.ch8` | Tick | StanislavDidus | CHIP-8 | vf-reset | 12 | Rhythm one button game for Chip-8 |
+| `tick.ch8` | Tick | StanislavDidus | CHIP-8 | vf-reset,vblank | 12 | Rhythm one button game for Chip-8 |
 | `wdl.ch8` | WDL | JohnEarnest | CHIP-8 | vip | - | That word game, but shorter |
 
 Controls
@@ -53,14 +61,8 @@ Controls
 
 The games were written in [Octo](https://github.com/JohnEarnest/Octo), which uses the same
 [keyboard layout](../README.md#keyboard) as these emulators, so the keys in their own
-instructions work as they are. Most move with `W` `A` `S` `D` and act with `E`. For example:
-
-- **Br8kout** - `A` / `D` move the paddle left / right.
-- **Flight Runner** - `W` / `S` / `A` / `D` move up / down / left / right.
-- **Super Pong** - `W` / `S` move the vertical paddle, `A` / `D` the horizontal one, and `E`
-  resets. Press any key to start.
-- **Mini Lights Out** - each of `1`-`4`, `Q`-`R`, `A`-`F` and `Z`-`V` toggles the light in the
-  same spot of the 4x4 grid.
+instructions work as they are. Most move with `W` `A` `S` `D` and act with `E`; each ROM's
+`controls` lines list its keys.
 
 Run them with, for example:
 

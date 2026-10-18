@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -53,13 +54,34 @@ func TestRejectsInvalidSettings(t *testing.T) {
 	for text, want := range map[string]string{
 		"quirks = octo\nspeed = fast\n": "line 2: speed must be a number from 1 to 10000",
 		"quirks = bogus\n":              `line 1: unknown quirk "bogus"`,
-		"colour = green\n":              `line 1: unknown setting "colour", expected quirks or speed`,
+		"colour = green\n":              `line 1: unknown setting "colour", expected quirks, speed, title, author, about or controls`,
 		"speed\n":                       `line 1: expected "name = value"`,
 		"speed = 0\n":                   "line 1: speed must be a number from 1 to 10000",
 	} {
 		if _, err := ParseRomSettings(text); err == nil || !strings.HasPrefix(err.Error(), want) {
 			t.Errorf("ParseRomSettings(%q) error = %v, want %q", text, err, want)
 		}
+	}
+}
+
+func TestParsesHowToPlay(t *testing.T) {
+	settings, err := ParseRomSettings("title = Br8kout\nauthor = SharpenedSpoon\n" +
+		"about = Break the bricks.\nabout = Don't miss the ball.\n" +
+		"controls = A / D: move left / right\ncontrols = E: serve\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.Title != "Br8kout" || settings.Author != "SharpenedSpoon" {
+		t.Errorf("Title, Author = %q, %q, want Br8kout, SharpenedSpoon", settings.Title, settings.Author)
+	}
+	if !slices.Equal(settings.About, []string{"Break the bricks.", "Don't miss the ball."}) {
+		t.Errorf("About = %q", settings.About)
+	}
+	if !slices.Equal(settings.Controls, []string{"A / D: move left / right", "E: serve"}) {
+		t.Errorf("Controls = %q", settings.Controls)
+	}
+	if settings.Quirks != nil || settings.Speed != nil {
+		t.Errorf("Quirks, Speed = %v, %v, want nil", settings.Quirks, settings.Speed)
 	}
 }
 
